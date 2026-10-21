@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DBA Cheat Sheet · Aurora PG · SQL Server · MongoDB · MarkLogic</title>
+<meta name="description" content="Offline DBA cheat sheet: the same task across Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic.">
+<meta name="theme-color" content="#2f5bd3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1320" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DBA Cheats">
+<meta name="application-name" content="DBA Cheats">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232f5bd3'/%3E%3Ctext x='50' y='68' font-size='46' text-anchor='middle' fill='white' font-family='monospace' font-weight='700'%3E%3E_%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<link rel="manifest" id="manifestLink" href="">
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--text:#141a26;--muted:#5f6b80;--line:#e1e6ef;--brand:#2f5bd3;--brand-soft:#e6edfd;
+--code:#f5f7fb;--codetext:#1b2333;--danger:#c93434;--danger-soft:#fde9e9;--warn:#9a6a00;--warn-soft:#fff4d6;--ph:#fff1b8;--phtext:#5a4300;
+--shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(20,30,60,.07);--r:16px;
+--pg:#336791;--ms:#a91d22;--mg:#13aa52;--ml:#c2410c;
+--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+:root[data-theme=dark]{--bg:#0b0f18;--card:#141a27;--text:#e6ebf5;--muted:#95a1b8;--line:#232c3d;--brand:#7aa2ff;--brand-soft:#1a2645;
+--code:#0e1320;--codetext:#d7e0f0;--danger:#ff7676;--danger-soft:#3b1c1f;--warn:#f3c55a;--warn-soft:#33290f;--ph:#4a3d0c;--phtext:#ffe69a;
+--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b;--mg:#4cd08a;--ml:#ff9a5c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;padding-bottom:calc(var(--sab) + 40px);overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px}
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(var(--sat) + 8px) 0 8px;border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:8px}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center;font:800 15px ui-monospace,monospace;flex:none}
+:root[data-theme=dark] .logo{color:#0b0f18}
+.title{font-weight:750;font-size:1.05rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title small{display:block;font-weight:500;color:var(--muted);font-size:.75rem}
+.ib{min-width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:1.15rem;flex:none}
+.search{position:relative;margin-top:8px}
+.search input{width:100%;height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);padding:0 44px 0 42px;font-size:16px;outline:none}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.search input:focus{border-color:var(--brand)}
+.search .mag{position:absolute;left:14px;top:13px;opacity:.55;pointer-events:none}
+.search .clr{position:absolute;right:2px;top:2px;width:44px;height:44px;border:0;background:none;font-size:1.1rem;color:var(--muted);display:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:38px;padding:0 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:.88rem;font-weight:600;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme=dark] .chip[aria-pressed=true]{color:#0b0f18}
+.chip.e[aria-pressed=true]{background:var(--ec);border-color:var(--ec);color:#fff}
+.chip.e{--ec:var(--brand)}
+.meta{color:var(--muted);font-size:.85rem;margin:10px 2px}
+.banner{background:var(--warn-soft);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin:10px 0;font-size:.9rem}
+.banner ol{margin:6px 0 0;padding-left:20px}
+.list{display:grid;gap:12px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;min-width:0}
+.ch{display:flex;align-items:flex-start;gap:8px;padding:12px 8px 8px 14px}
+.ch h3{margin:0;font-size:1rem;line-height:1.3;flex:1;min-width:0;overflow-wrap:anywhere}
+.ch .sub{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.tag{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand)}
+.tag.dz{background:var(--danger-soft);color:var(--danger)}
+.tag.cu{background:var(--warn-soft);color:var(--warn)}
+.star{width:44px;height:44px;border:0;background:none;font-size:1.35rem;color:var(--muted);flex:none;border-radius:12px}
+.star[aria-pressed=true]{color:#f0b400}
+.tabs{display:flex;gap:4px;padding:0 10px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;min-height:44px;padding:0 6px;border:0;background:none;font-weight:700;font-size:.8rem;color:var(--muted);border-bottom:3px solid transparent}
+.tab[aria-selected=true]{color:var(--ec);border-bottom-color:var(--ec)}
+.tab.tna{opacity:.5}
+.panels{display:block}
+.pn{display:none;padding:12px 14px 14px;min-width:0}
+.pn.on{display:block}
+.pn .eh{display:none;font-weight:800;font-size:.85rem;color:var(--ec);margin-bottom:6px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.b{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--code);border:1px solid var(--line);color:var(--muted)}
+.b.dz{background:var(--danger-soft);color:var(--danger);border-color:transparent}
+.b.v{color:var(--brand)}
+pre{margin:0;background:var(--code);color:var(--codetext);border:1px solid var(--line);border-radius:12px;padding:12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:60vh;overflow:auto;tab-size:2}
+pre .p{background:var(--ph);color:var(--phtext);border-radius:4px;padding:0 2px}
+pre .p.f{background:transparent;color:var(--brand);font-weight:700;padding:0}
+.note{font-size:.86rem;color:var(--muted);margin:8px 0 0;overflow-wrap:anywhere}
+.na{overflow-wrap:anywhere;font-size:.9rem;color:var(--muted);background:var(--code);border:1px dashed var(--line);border-radius:12px;padding:12px}
+.na b{color:var(--text)}
+.phs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:0 0 10px}
+.phs label{display:flex;flex-direction:column;font-size:.72rem;font-weight:700;color:var(--muted);min-width:0}
+.phs input{height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);padding:0 10px;font:14px ui-monospace,monospace;min-width:0;width:100%;margin-top:3px}
+.acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:.9rem}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme=dark] .btn.pri{color:#0b0f18}
+.btn.dz{color:var(--danger)}
+.btn.ok{background:#15a46b;border-color:#15a46b;color:#fff}
+.unote{padding:0 14px 12px}
+.unote textarea{width:100%;min-height:70px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);padding:10px;font-size:.9rem;resize:vertical}
+.unote .saved{white-space:pre-wrap;font-size:.86rem;background:var(--warn-soft);border-radius:10px;padding:8px 10px;margin-bottom:8px;overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+@media (min-width:900px){
+ .tabs{display:none}
+ .panels{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));}
+ .pn{display:block;border-left:1px solid var(--line)}
+ .pn:first-child{border-left:0}
+ .pn .eh{display:block}
+ pre{font-size:12px}
+}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+.sheet.open{display:flex}
+.sheet .box{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(var(--sab) + 18px)}
+@media (min-width:600px){.sheet{align-items:center}.sheet .box{border-radius:20px}}
+.box h2{margin:0 0 12px;font-size:1.15rem}
+.menu button{display:block;width:100%;text-align:left;min-height:50px;border:0;border-bottom:1px solid var(--line);background:none;font-size:1rem;padding:0 6px}
+.f{display:block;margin-bottom:12px;font-size:.85rem;font-weight:700;color:var(--muted)}
+.f input,.f select,.f textarea{display:block;width:100%;margin-top:4px;min-height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);padding:8px 12px;font-size:16px;font-weight:400;color:var(--text)}
+.f textarea{min-height:120px;font-family:ui-monospace,monospace;font-size:14px}
+.chk{display:flex;align-items:center;gap:10px;font-weight:600;margin-bottom:12px;min-height:44px}
+.chk input{width:22px;height:22px}
+.toast{position:fixed;left:50%;bottom:calc(var(--sab) + 24px);transform:translateX(-50%) translateY(20px);background:#141a26;color:#fff;padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.small{font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+ <div class="bar">
+  <div class="logo">&gt;_</div>
+  <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic</small></div>
+  <button class="ib" id="themeBtn" aria-label="Toggle dark mode" title="Theme">🌓</button>
+  <button class="ib" id="menuBtn" aria-label="Menu" title="Menu">⋯</button>
+ </div>
+ <div class="search"><span class="mag">🔍</span>
+  <input id="q" type="search" placeholder="Search a task: kill session, blocking, table size…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+  <button class="clr" id="clr" aria-label="Clear search">✕</button></div>
+ <div class="chips" id="engChips" role="group" aria-label="Engines"></div>
+ <div class="chips" id="catChips" role="group" aria-label="Categories"></div>
+</div></header>
+<main class="wrap">
+ <div id="banner"></div>
+ <div class="meta" id="meta"></div>
+ <div class="list" id="list"></div>
+</main>
+<div class="sheet" id="menuSheet"><div class="box menu">
+ <h2>Menu</h2>
+ <button id="mAdd">➕ Add my own snippet</button>
+ <button id="mExport">⬇️ Export backup (JSON)</button>
+ <button id="mImport">⬆️ Import backup</button>
+ <button id="mClearVals">🧹 Clear filled-in placeholder values</button>
+ <button id="mClose">Close</button>
+ <p class="small" id="storeInfo"></p>
+ <p class="small">Commands follow the official docs for each engine. Always read the note and test on non-production first. Everything you add is saved only in this browser.</p>
+ <input type="file" id="fileIn" accept="application/json,.json" hidden>
+</div></div>
+<div class="sheet" id="addSheet"><div class="box">
+ <h2 id="addTitle">Add my snippet</h2>
+ <label class="f">Task title<input id="aT" maxlength="120" placeholder="e.g. Check our nightly ETL lag"></label>
+ <label class="f">Engine<select id="aE"></select></label>
+ <label class="f">Category<select id="aC"></select></label>
+ <label class="f">Command (use {placeholders} like {table})<textarea id="aCode" spellcheck="false" autocapitalize="off"></textarea></label>
+ <label class="f">Note (optional)<input id="aN" maxlength="300"></label>
+ <label class="f">Extra search keywords (optional)<input id="aK" maxlength="200"></label>
+ <label class="chk"><input type="checkbox" id="aD"> Destructive (show warning badge)</label>
+ <div class="acts"><button class="btn pri" id="aSave">Save</button><button class="btn" id="aCancel">Cancel</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* Engines: pg=Aurora PostgreSQL, ms=SQL Server, mg=MongoDB (mongosh), ml=MarkLogic.
+   Entry: {c:code, n:note, v:version, d:destructive, l:lang} or {na:note}. */
+var NA=function(n){return {na:n}};
+var TASKS=[
+/* ===== Sessions & locks ===== */
+{id:'active-sessions',cat:'sessions',tri:1,t:'List active sessions / running requests',k:'who is connected current activity processes running queries what is running now sp_who',
+pg:{c:"SELECT pid, usename, datname, client_addr, state,\n       wait_event_type, wait_event,\n       now() - query_start AS runtime,\n       left(query, 100) AS query\nFROM pg_stat_activity\nWHERE state <> 'idle'\n  AND pid <> pg_backend_pid()\nORDER BY runtime DESC NULLS LAST;",n:'Without pg_monitor / pg_read_all_stats (or rds_superuser on Aurora) you only see query text for your own sessions.'},
+ms:{c:"SELECT s.session_id, s.login_name, s.host_name,\n       DB_NAME(r.database_id) AS db, r.status, r.command,\n       r.wait_type, r.blocking_session_id,\n       r.total_elapsed_time / 1000 AS elapsed_s,\n       t.text AS sql_text\nFROM sys.dm_exec_requests r\nJOIN sys.dm_exec_sessions s ON s.session_id = r.session_id\nCROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t\nWHERE s.is_user_process = 1\n  AND r.session_id <> @@SPID\nORDER BY r.total_elapsed_time DESC;",n:'Needs VIEW SERVER STATE (VIEW SERVER PERFORMANCE STATE on 2022+) to see other sessions.'},
+mg:{c:"db.currentOp({ active: true })",n:'Needs the inprog privilege (e.g. clusterMonitor role) to see other users\' operations. Aggregation form: db.getSiblingDB("admin").aggregate([{ $currentOp: {} }])'},
+ml:{c:"xquery version \"1.0-ml\";\nfor $host in xdmp:hosts()\nfor $server in xdmp:servers()\nreturn xdmp:server-status($host, $server)//*:request-status",n:'XQuery (Query Console). REST alternative: curl --anyauth -u {admin} "http://{host}:8002/manage/v2/requests?format=json"'}},
+
+{id:'session-count',cat:'sessions',tri:1,t:'Connection count vs max connections',k:'connections limit max_connections too many clients pool exhausted count sessions',
+pg:{c:"SELECT count(*) AS used,\n       current_setting('max_connections')::int AS max_conn,\n       count(*) FILTER (WHERE state = 'active') AS active,\n       count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_txn\nFROM pg_stat_activity;",n:'Aurora derives max_connections from instance memory by default (parameter group formula). Count includes background processes on PG10+.'},
+ms:{c:"SELECT COUNT(*) AS user_sessions,\n       @@MAX_CONNECTIONS AS max_connections\nFROM sys.dm_exec_sessions\nWHERE is_user_process = 1;",n:'@@MAX_CONNECTIONS is the allowed maximum (32767 unless \'user connections\' is set).'},
+mg:{c:"db.serverStatus().connections",n:'Shows current, available and totalCreated.'},
+ml:{c:"xquery version \"1.0-ml\";\nfor $server in xdmp:servers()\nreturn fn:concat(xdmp:server-name($server), \": \",\n  fn:count(xdmp:server-status(xdmp:host(), $server)//*:request-status))",n:'XQuery. MarkLogic limits concurrency by app server threads, not a global connection cap.'}},
+
+{id:'sessions-by-user',cat:'sessions',t:'Sessions grouped by user / database / host',k:'connections per user per db per host client breakdown sp_who2',
+pg:{c:"SELECT usename, datname, client_addr, state, count(*)\nFROM pg_stat_activity\nGROUP BY 1, 2, 3, 4\nORDER BY 5 DESC;"},
+ms:{c:"SELECT login_name, host_name, DB_NAME(database_id) AS db,\n       status, COUNT(*) AS sessions\nFROM sys.dm_exec_sessions\nWHERE is_user_process = 1\nGROUP BY login_name, host_name, database_id, status\nORDER BY sessions DESC;\n\n-- classic view:\nEXEC sp_who2;",v:'database_id column: SQL Server 2012+'},
+mg:{c:"db.getSiblingDB(\"admin\").aggregate([\n  { $currentOp: { allUsers: true, idleConnections: true } },\n  { $group: { _id: { client: \"$client\", app: \"$appName\" }, count: { $sum: 1 } } },\n  { $sort: { count: -1 } }\n])"},
+ml:NA('Requests are tracked per app server, not per user session. "List active sessions" shows the user for each request.')},
+
+{id:'blocking',cat:'sessions',tri:1,t:'Find blocking / blocked sessions',k:'blocking blocked blocker lock wait waiting locks contention stuck hung',
+pg:{c:"SELECT pid,\n       pg_blocking_pids(pid) AS blocked_by,\n       usename, wait_event_type, wait_event,\n       now() - query_start AS waiting_for,\n       left(query, 100) AS query\nFROM pg_stat_activity\nWHERE cardinality(pg_blocking_pids(pid)) > 0\nORDER BY waiting_for DESC;",v:'PostgreSQL 9.6+',n:'pg_blocking_pids() is fairly expensive; avoid polling it every second on a busy server.'},
+ms:{c:"SELECT r.session_id, r.blocking_session_id,\n       r.wait_type, r.wait_time / 1000 AS wait_s,\n       r.wait_resource, DB_NAME(r.database_id) AS db,\n       t.text AS sql_text\nFROM sys.dm_exec_requests r\nCROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t\nWHERE r.blocking_session_id <> 0\nORDER BY r.wait_time DESC;"},
+mg:{c:"db.currentOp({ waitingForLock: true })",n:'WiredTiger uses document-level concurrency, so true lock waits are rare; look for long ops holding exclusive collection/database locks.'},
+ml:NA('No blocking-session view. Updates take document locks; look for long-running update requests (List active sessions) and lock metrics in Monitoring History.')},
+
+{id:'head-blocker',cat:'sessions',tri:1,t:'Find the head (root) blocker',k:'head blocker root blocker lead blocking chain',
+pg:{c:"SELECT pid, usename, state,\n       now() - xact_start AS xact_age,\n       left(query, 100) AS last_query\nFROM pg_stat_activity\nWHERE pid IN (SELECT unnest(pg_blocking_pids(pid)) FROM pg_stat_activity)\n  AND cardinality(pg_blocking_pids(pid)) = 0;",v:'PostgreSQL 9.6+',n:'The head blocker is often "idle in transaction": the app opened a transaction and never committed.'},
+ms:{c:"SELECT s.session_id, s.login_name, s.host_name, s.program_name,\n       s.status, t.text AS last_sql\nFROM sys.dm_exec_sessions s\nJOIN sys.dm_exec_connections c ON c.session_id = s.session_id\nCROSS APPLY sys.dm_exec_sql_text(c.most_recent_sql_handle) t\nWHERE s.session_id IN (SELECT blocking_session_id FROM sys.dm_exec_requests WHERE blocking_session_id <> 0)\n  AND s.session_id NOT IN (SELECT session_id FROM sys.dm_exec_requests WHERE blocking_session_id <> 0);",n:'Uses most_recent_sql_handle so it also works when the head blocker is sleeping with an open transaction.'},
+mg:NA('No blocking chains. Use db.currentOp({ waitingForLock: true }) and look at ops with large secs_running.'),
+ml:NA('No equivalent; find the oldest running update request instead.')},
+
+{id:'lock-detail',cat:'sessions',t:'Show lock details',k:'locks held lock mode granted pg_locks dm_tran_locks lock info',
+pg:{c:"SELECT l.locktype, l.relation::regclass AS relation, l.mode, l.granted,\n       a.pid, a.usename, left(a.query, 80) AS query\nFROM pg_locks l\nJOIN pg_stat_activity a ON a.pid = l.pid\nWHERE a.datname = current_database()\nORDER BY l.granted, a.pid;"},
+ms:{c:"SELECT request_session_id, resource_type,\n       DB_NAME(resource_database_id) AS db,\n       resource_associated_entity_id,\n       request_mode, request_status\nFROM sys.dm_tran_locks\nWHERE resource_database_id = DB_ID(N'{db}')\nORDER BY request_status, request_session_id;"},
+mg:{c:"db.adminCommand({ lockInfo: 1 })",n:'Locks currently held or pending on this mongod. Cumulative counters: db.serverStatus().locks'},
+ml:NA('Document lock state is not exposed as a queryable table.')},
+
+{id:'idle-in-txn',cat:'sessions',tri:1,t:'Sessions idle in an open transaction',k:'idle in transaction open transaction sleeping uncommitted forgot commit',
+pg:{c:"SELECT pid, usename, client_addr,\n       now() - xact_start AS xact_age,\n       now() - state_change AS idle_for,\n       left(query, 100) AS last_query\nFROM pg_stat_activity\nWHERE state IN ('idle in transaction', 'idle in transaction (aborted)')\nORDER BY xact_age DESC;",n:'idle_in_transaction_session_timeout (9.6+) in the parameter group terminates these automatically.'},
+ms:{c:"SELECT s.session_id, s.login_name, s.host_name, s.program_name,\n       at.transaction_begin_time\nFROM sys.dm_tran_session_transactions st\nJOIN sys.dm_exec_sessions s ON s.session_id = st.session_id\nJOIN sys.dm_tran_active_transactions at ON at.transaction_id = st.transaction_id\nWHERE s.status = 'sleeping'\nORDER BY at.transaction_begin_time;"},
+mg:{c:"db.currentOp({ active: false, transaction: { $exists: true } })",v:'MongoDB 4.0+ (multi-document transactions)',n:'transactionLifetimeLimitSeconds (default 60) aborts these automatically.'},
+ml:NA('Multi-statement transactions time out per app server settings; there is no idle-transaction view.')},
+
+{id:'oldest-txn',cat:'sessions',t:'Oldest open transaction',k:'longest transaction old transaction opentran open tran',
+pg:{c:"SELECT pid, usename, state,\n       now() - xact_start AS xact_age,\n       backend_xmin,\n       left(query, 80) AS query\nFROM pg_stat_activity\nWHERE xact_start IS NOT NULL\nORDER BY xact_start\nLIMIT 5;",n:'An old backend_xmin holds back vacuum cleanup (bloat).'},
+ms:{c:"DBCC OPENTRAN (N'{db}');"},
+mg:{c:"db.currentOp({ transaction: { $exists: true } })",v:'MongoDB 4.0+',n:'Check transaction.timeOpenMicros in the output.'},
+ml:NA('No equivalent.')},
+
+{id:'deadlocks',cat:'sessions',t:'Check recent deadlocks',k:'deadlock deadlocks victim xml_deadlock_report',
+pg:{c:"SELECT datname, deadlocks\nFROM pg_stat_database\nWHERE datname IS NOT NULL\nORDER BY deadlocks DESC;",n:'Counters only. Details go to the PostgreSQL log; log_lock_waits = on also logs long lock waits.'},
+ms:{c:"SELECT xed.value('@timestamp', 'datetime2') AS ts_utc,\n       xed.query('.') AS deadlock_graph\nFROM (\n  SELECT CAST(st.target_data AS xml) AS target_data\n  FROM sys.dm_xe_session_targets st\n  JOIN sys.dm_xe_sessions s ON s.address = st.event_session_address\n  WHERE s.name = 'system_health' AND st.target_name = 'ring_buffer'\n) AS x\nCROSS APPLY x.target_data.nodes('RingBufferTarget/event[@name=\"xml_deadlock_report\"]') AS q(xed)\nORDER BY ts_utc DESC;",n:'Reads the built-in system_health ring buffer; older events roll off. Its event_file target keeps more history.'},
+mg:NA('No classic deadlocks; WiredTiger write conflicts are retried internally (serverStatus().metrics.operation.writeConflicts).'),
+ml:NA('MarkLogic detects deadlocks and retries the update automatically; they show in ErrorLog.txt.')},
+
+{id:'cancel-query',cat:'sessions',t:'Cancel a running query (keep the session)',k:'cancel stop query abort statement interrupt',
+pg:{c:"SELECT pg_cancel_backend({pid});",n:'Gentler than terminate: the query stops, the connection stays. On Aurora rds_superuser can cancel others\' sessions (not rdsadmin\'s).'},
+ms:NA('KILL is the only server-side option and ends the whole session (rolling back its transaction). Client drivers can cancel their own query.'),
+mg:{c:"db.killOp({opid})",d:1,n:'Get opid from db.currentOp(). Kills the operation, not the connection.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:request-cancel(xdmp:host(), xdmp:server(\"{appserver}\"), {request_id})",d:1,n:'XQuery. request-id comes from xdmp:server-status(...)//*:request-status.'}},
+
+{id:'kill-session',cat:'sessions',tri:1,danger:1,t:'Kill / terminate a session',k:'kill terminate session end connection kill spid kill pid disconnect',
+pg:{c:"SELECT pg_terminate_backend({pid});",d:1,n:'Needs superuser, the same role, or pg_signal_backend. On Aurora rds_superuser can terminate other users\' sessions but not rdsadmin\'s.'},
+ms:{c:"KILL {spid};\n\n-- check rollback progress afterwards:\nKILL {spid} WITH STATUSONLY;",d:1,n:'Rolls back the open transaction, which can take as long as the work done so far.'},
+mg:{c:"db.killOp({opid})",d:1,n:'Operation-level kill. For every op of a user see "Kill all sessions for a database / user".'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:request-cancel(xdmp:host(), xdmp:server(\"{appserver}\"), {request_id})",d:1,n:'XQuery. Cancels a request on that app server.'}},
+
+{id:'kill-all-db',cat:'sessions',danger:1,t:'Kill all sessions for a database / user',k:'kill all sessions disconnect everyone single user mode terminate all connections',
+pg:{c:"SELECT pg_terminate_backend(pid)\nFROM pg_stat_activity\nWHERE datname = '{db}'\n  AND pid <> pg_backend_pid();",d:1,n:'Clients may reconnect immediately; revoke CONNECT first if you need them out.'},
+ms:{c:"ALTER DATABASE [{db}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;\n\n-- when done:\nALTER DATABASE [{db}] SET MULTI_USER;",d:1,n:'Rolls back all open transactions in that database immediately.'},
+mg:{c:"db.adminCommand({\n  killAllSessionsByPattern: [\n    { users: [ { user: \"{user}\", db: \"{authdb}\" } ] }\n  ]\n})",d:1,v:'MongoDB 3.6+',n:'Kills that user\'s sessions and their operations.'},
+ml:NA('No bulk kill. Cancel requests one by one with xdmp:request-cancel, or disable the app server temporarily.')},
+/* ===== Performance ===== */
+{id:'long-running',cat:'perf',tri:1,t:'Long-running queries',k:'long running slow query queries taking long runtime duration hung',
+pg:{c:"SELECT pid, usename, datname,\n       now() - query_start AS duration,\n       state, wait_event_type, wait_event,\n       left(query, 120) AS query\nFROM pg_stat_activity\nWHERE state <> 'idle'\n  AND now() - query_start > interval '{minutes} minutes'\nORDER BY duration DESC;"},
+ms:{c:"SELECT r.session_id, r.start_time,\n       r.total_elapsed_time / 1000 AS elapsed_s,\n       r.status, r.wait_type, r.cpu_time, r.logical_reads,\n       t.text AS sql_text\nFROM sys.dm_exec_requests r\nCROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t\nWHERE r.session_id <> @@SPID\n  AND r.total_elapsed_time > {seconds} * 1000\nORDER BY r.total_elapsed_time DESC;"},
+mg:{c:"db.currentOp({ active: true, secs_running: { $gt: {seconds} } })"},
+ml:{c:"xquery version \"1.0-ml\";\nfor $r in xdmp:server-status(xdmp:host(), xdmp:server(\"{appserver}\"))//*:request-status\norder by $r/*:start-time\nreturn $r",n:'XQuery. Oldest requests first; check request-text and start-time.'}},
+
+{id:'top-queries',cat:'perf',t:'Top queries by total time',k:'top queries expensive queries pg_stat_statements query stats heaviest workload cpu',
+pg:{c:"SELECT queryid, calls,\n       round(total_exec_time::numeric, 1) AS total_ms,\n       round(mean_exec_time::numeric, 2) AS mean_ms,\n       rows,\n       left(query, 100) AS query\nFROM pg_stat_statements\nORDER BY total_exec_time DESC\nLIMIT 20;",v:'PostgreSQL 13+ column names (12 and older: total_time, mean_time)',n:'Needs CREATE EXTENSION pg_stat_statements and the library in shared_preload_libraries (Aurora loads it by default).'},
+ms:{c:"SELECT TOP 20\n  qs.total_elapsed_time / 1000 AS total_ms,\n  qs.execution_count,\n  qs.total_elapsed_time / qs.execution_count / 1000 AS avg_ms,\n  qs.total_worker_time / 1000 AS cpu_ms,\n  SUBSTRING(t.text, (qs.statement_start_offset / 2) + 1,\n    ((CASE qs.statement_end_offset WHEN -1 THEN DATALENGTH(t.text)\n      ELSE qs.statement_end_offset END - qs.statement_start_offset) / 2) + 1) AS stmt\nFROM sys.dm_exec_query_stats qs\nCROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) t\nORDER BY qs.total_elapsed_time DESC;",n:'Plan-cache based: resets on restart and misses evicted plans. ORDER BY total_worker_time for CPU.'},
+mg:{c:"db.system.profile.find().sort({ millis: -1 }).limit(20)",n:'Only populated when the profiler is on for that database (see "Enable slow query logging").'},
+ml:NA('No cumulative query-stats view. Profile a specific query in Query Console (Profile tab) or with prof:eval().')},
+
+{id:'top-io',cat:'perf',t:'Top queries by I/O / reads',k:'io reads logical reads disk reads buffers heavy io',
+pg:{c:"SELECT queryid, calls,\n       shared_blks_read, shared_blks_hit,\n       temp_blks_written,\n       left(query, 100) AS query\nFROM pg_stat_statements\nORDER BY shared_blks_read DESC\nLIMIT 20;",n:'Requires pg_stat_statements.'},
+ms:{c:"SELECT TOP 20 qs.total_logical_reads, qs.total_physical_reads,\n       qs.execution_count, t.text\nFROM sys.dm_exec_query_stats qs\nCROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) t\nORDER BY qs.total_logical_reads DESC;"},
+mg:{c:"db.system.profile.find().sort({ docsExamined: -1 }).limit(20)",n:'Requires the profiler.'},
+ml:NA('No equivalent; use Monitoring History for I/O rates per forest.')},
+
+{id:'slow-log',cat:'perf',t:'Enable slow query logging / profiler',k:'slow query log profiler log_min_duration_statement extended events capture',
+pg:{c:"ALTER DATABASE {db} SET log_min_duration_statement = {ms};",n:'Applies to new sessions. On Aurora the usual way is the DB parameter group (dynamic, no reboot).'},
+ms:{c:"CREATE EVENT SESSION [long_queries] ON SERVER\nADD EVENT sqlserver.sql_statement_completed (\n  ACTION (sqlserver.sql_text, sqlserver.session_id, sqlserver.database_name)\n  WHERE duration > {microseconds})\nADD TARGET package0.event_file (SET filename = N'long_queries');\n\nALTER EVENT SESSION [long_queries] ON SERVER STATE = START;",n:'duration is in microseconds for this event. Extended Events replace the deprecated SQL Trace/Profiler.'},
+mg:{c:"db.setProfilingLevel(1, { slowms: {ms} })",n:'Per database; level 1 = slow ops only. Slow ops are written to the mongod log at any level.'},
+ml:NA('No slow-query log setting. Use request timeouts on the app server and the Profile tab in Query Console.')},
+
+{id:'explain',cat:'perf',t:'Show the execution plan',k:'explain plan execution plan showplan query plan analyze',
+pg:{c:"EXPLAIN (ANALYZE, BUFFERS)\n{query};",n:'ANALYZE really executes the statement. For DML wrap it: BEGIN; EXPLAIN ANALYZE ...; ROLLBACK;'},
+ms:{c:"SET SHOWPLAN_XML ON;\nGO\n{query}\nGO\nSET SHOWPLAN_XML OFF;\nGO",n:'Estimated plan, not executed. SET STATISTICS XML ON gives the actual plan (executes the query).'},
+mg:{c:"db.{collection}.find({filter}).explain(\"executionStats\")",n:'Look for COLLSCAN vs IXSCAN and totalDocsExamined vs nReturned.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:plan(\n  cts:search(fn:doc(), cts:word-query(\"{term}\"))\n)",n:'XQuery. For Optic queries use op:explain() (XQuery) or .explain() (JavaScript).'}},
+
+{id:'wait-stats',cat:'perf',tri:1,t:'Wait statistics (what is the server waiting on)',k:'waits wait events wait stats bottleneck wait types',
+pg:{c:"SELECT wait_event_type, wait_event, count(*)\nFROM pg_stat_activity\nWHERE state = 'active'\nGROUP BY 1, 2\nORDER BY 3 DESC;",n:'Point-in-time sample. On Aurora, Performance Insights shows DB load by wait over time.'},
+ms:{c:"SELECT TOP 20 wait_type,\n       wait_time_ms / 1000.0 AS wait_s,\n       waiting_tasks_count,\n       signal_wait_time_ms / 1000.0 AS signal_s\nFROM sys.dm_os_wait_stats\nWHERE wait_type NOT IN (\n  'BROKER_TASK_STOP','BROKER_TO_FLUSH','BROKER_EVENTHANDLER','LAZYWRITER_SLEEP',\n  'SQLTRACE_BUFFER_FLUSH','XE_TIMER_EVENT','XE_DISPATCHER_WAIT',\n  'REQUEST_FOR_DEADLOCK_SEARCH','CHECKPOINT_QUEUE','WAITFOR','LOGMGR_QUEUE',\n  'DIRTY_PAGE_POLL','SP_SERVER_DIAGNOSTICS_SLEEP',\n  'HADR_FILESTREAM_IOMGR_IOCOMPLETION','SQLTRACE_INCREMENTAL_FLUSH_SLEEP',\n  'QDS_PERSIST_TASK_MAIN_LOOP_SLEEP','QDS_CLEANUP_STALE_QUERIES_TASK_MAIN_LOOP_SLEEP')\n  AND wait_type NOT LIKE 'SLEEP%'\nORDER BY wait_time_ms DESC;",n:'Cumulative since restart or last clear. The exclusion list is a short version of the usual benign-waits list.'},
+mg:{c:"db.serverStatus().wiredTiger.concurrentTransactions",v:'Up to 6.x; 7.0+ use db.serverStatus().queues.execution',n:'Read/write tickets in use vs available. Exhausted tickets = queuing.'},
+ml:NA('No wait-event view; use Monitoring History (CPU, I/O, request rates).')},
+
+{id:'cache-hit',cat:'perf',t:'Buffer / cache hit ratio and memory pressure',k:'cache hit ratio buffer cache page life expectancy memory pressure wiredtiger cache',
+pg:{c:"SELECT datname,\n       round(100.0 * blks_hit / nullif(blks_hit + blks_read, 0), 2) AS cache_hit_pct\nFROM pg_stat_database\nWHERE datname IS NOT NULL\nORDER BY cache_hit_pct;"},
+ms:{c:"SELECT object_name, counter_name, cntr_value\nFROM sys.dm_os_performance_counters\nWHERE object_name LIKE '%Buffer Manager%'\n  AND counter_name = 'Page life expectancy';"},
+mg:{c:"const c = db.serverStatus().wiredTiger.cache;\n({ usedMB: c[\"bytes currently in the cache\"] / 1048576,\n   maxMB: c[\"maximum bytes configured\"] / 1048576,\n   dirtyMB: c[\"tracked dirty bytes in the cache\"] / 1048576 })"},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/hosts/{hostname}?view=status&format=json\"",l:'curl',n:'Host status includes cache sizes and hit/miss rates.'}},
+
+{id:'seq-scans',cat:'perf',t:'Tables with the most full scans',k:'sequential scan seq scan table scan full scan collscan',
+pg:{c:"SELECT schemaname, relname, seq_scan, seq_tup_read,\n       idx_scan, n_live_tup\nFROM pg_stat_user_tables\nORDER BY seq_tup_read DESC\nLIMIT 20;",n:'Stats are per instance: Aurora readers have their own counters.'},
+ms:{c:"SELECT OBJECT_NAME(s.object_id) AS table_name,\n       SUM(s.user_scans) AS scans,\n       SUM(s.user_seeks) AS seeks,\n       SUM(s.user_lookups) AS lookups\nFROM sys.dm_db_index_usage_stats s\nWHERE s.database_id = DB_ID()\nGROUP BY s.object_id\nORDER BY scans DESC;"},
+mg:{c:"db.{collection}.aggregate([ { $collStats: { queryExecStats: {} } } ])",v:'MongoDB 4.4+',n:'queryExecStats.collectionScans.total counts collection scans.'},
+ml:NA('Not applicable; searches resolve from indexes. Unindexed searches show up in xdmp:plan as large fragment counts.')},
+
+{id:'query-store',cat:'perf',t:'Query history over time (Query Store)',k:'query store history regressed queries plan regression',
+pg:NA('No built-in history. pg_stat_statements is cumulative; on Aurora use Performance Insights for history by SQL.'),
+ms:{c:"SELECT TOP 20 q.query_id, qt.query_sql_text,\n       rs.count_executions,\n       rs.avg_duration / 1000.0 AS avg_ms,\n       rs.last_execution_time\nFROM sys.query_store_query q\nJOIN sys.query_store_query_text qt ON qt.query_text_id = q.query_text_id\nJOIN sys.query_store_plan p ON p.query_id = q.query_id\nJOIN sys.query_store_runtime_stats rs ON rs.plan_id = p.plan_id\nORDER BY rs.avg_duration DESC;",v:'SQL Server 2016+',n:'Query Store must be on: ALTER DATABASE [{db}] SET QUERY_STORE = ON; (default for new DBs in 2022). avg_duration is in microseconds; one row per plan per interval.'},
+mg:NA('Use the profiler or the Atlas Query Profiler.'),
+ml:NA('No equivalent.')},
+
+{id:'reset-stats',cat:'perf',danger:1,t:'Reset performance statistics',k:'reset clear stats counters statements reset wait stats clear',
+pg:{c:"SELECT pg_stat_statements_reset();\n-- table/index counters for current db:\nSELECT pg_stat_reset();",d:1,n:'Loses the history you may need for an RCA. Export first.'},
+ms:{c:"DBCC SQLPERF ('sys.dm_os_wait_stats', CLEAR);",d:1},
+mg:NA('Counters reset only on restart. Profiler data: set level 0, then drop system.profile.'),
+ml:NA('No equivalent.')},
+
+/* ===== Backup & restore ===== */
+{id:'backup-full',cat:'backup',t:'Take a full / logical backup',k:'backup dump export full backup pg_dump mongodump',
+pg:{c:"pg_dump -h {host} -U {user} -d {db} \\\n  -Fc -f {db}.dump",l:'shell',n:'Logical backup in custom format (restore with pg_restore). Aurora\'s own backups are continuous and storage-level; see "Take a storage snapshot".'},
+ms:{c:"BACKUP DATABASE [{db}]\nTO DISK = N'{backup_file}'\nWITH COMPRESSION, CHECKSUM, STATS = 10;",n:'Add COPY_ONLY for ad-hoc backups that must not reset the differential base. COMPRESSION needs Standard/Enterprise (2008 R2+).'},
+mg:{c:"mongodump --uri=\"{uri}\" --db={db} \\\n  --gzip --archive={db}.archive.gz",l:'shell',n:'Point it at a secondary to reduce load. --oplog (whole instance only) gives a consistent point in time.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:database-backup(\n  xdmp:database-forests(xdmp:database(\"{db}\")),\n  \"{backup_dir}\")",n:'XQuery. Returns a job id. The directory must exist on every host that has a forest.'}},
+
+{id:'snapshot',cat:'backup',t:'Take a storage snapshot (cloud)',k:'snapshot cluster snapshot aws rds manual backup',
+pg:{c:"aws rds create-db-cluster-snapshot \\\n  --db-cluster-identifier {cluster} \\\n  --db-cluster-snapshot-identifier {snapshot}",l:'shell',n:'Aurora cluster snapshot; no performance impact on the writer.'},
+ms:{c:"aws rds create-db-snapshot \\\n  --db-instance-identifier {instance} \\\n  --db-snapshot-identifier {snapshot}",l:'shell',n:'RDS for SQL Server only. On-prem/VM: use BACKUP or VSS-based tools.'},
+mg:NA('No server command. Use Atlas/Ops Manager snapshots, or filesystem snapshots around db.fsyncLock() / db.fsyncUnlock().'),
+ml:NA('No snapshot command; use xdmp:database-backup.')},
+
+{id:'backup-log',cat:'backup',t:'Transaction log / incremental backup',k:'log backup transaction log incremental differential wal archive trn',
+pg:NA('Aurora backs up continuously (point-in-time restore inside the retention window). Self-managed PostgreSQL uses WAL archiving (archive_command) plus pg_basebackup.'),
+ms:{c:"BACKUP LOG [{db}]\nTO DISK = N'{backup_file}'\nWITH COMPRESSION, CHECKSUM;\n\n-- differential:\nBACKUP DATABASE [{db}] TO DISK = N'{backup_file}'\nWITH DIFFERENTIAL, COMPRESSION, CHECKSUM;",n:'Log backups need FULL or BULK_LOGGED recovery and an existing full backup.'},
+mg:NA('No incremental mongodump. Point-in-time comes from the oplog (Atlas / Ops Manager continuous backup).'),
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:database-incremental-backup(\n  xdmp:database-forests(xdmp:database(\"{db}\")),\n  \"{backup_dir}\")",v:'MarkLogic 8+',n:'XQuery. Needs an existing full backup in the same directory.'}},
+
+{id:'backup-progress',cat:'backup',t:'Backup / restore progress',k:'backup progress restore progress percent complete eta status running backup',
+pg:{c:"aws rds describe-db-cluster-snapshots \\\n  --db-cluster-snapshot-identifier {snapshot} \\\n  --query \"DBClusterSnapshots[].[Status,PercentProgress]\"",l:'shell',n:'pg_dump / pg_restore run client-side; watch them with --verbose.'},
+ms:{c:"SELECT session_id, command, percent_complete,\n       estimated_completion_time / 60000 AS eta_min,\n       start_time\nFROM sys.dm_exec_requests\nWHERE command IN ('BACKUP DATABASE', 'BACKUP LOG',\n                  'RESTORE DATABASE', 'RESTORE LOG');"},
+mg:NA('mongodump / mongorestore show progress on the client console only.'),
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:database-backup-status({job_id})",n:'XQuery. Use the job id returned by xdmp:database-backup.'}},
+
+{id:'backup-history',cat:'backup',t:'Backup history / last backup',k:'backup history last backup when was backup taken msdb backupset',
+pg:{c:"aws rds describe-db-cluster-snapshots \\\n  --db-cluster-identifier {cluster} \\\n  --query \"DBClusterSnapshots[].[DBClusterSnapshotIdentifier,SnapshotType,SnapshotCreateTime,Status]\" \\\n  --output table",l:'shell',n:'Automated + manual snapshots. Restorable window: aws rds describe-db-clusters (EarliestRestorableTime / LatestRestorableTime).'},
+ms:{c:"SELECT TOP 20 bs.database_name,\n       bs.type,  -- D = full, I = diff, L = log\n       bs.backup_start_date, bs.backup_finish_date,\n       bs.backup_size / 1048576 AS size_mb,\n       bmf.physical_device_name\nFROM msdb.dbo.backupset bs\nJOIN msdb.dbo.backupmediafamily bmf ON bmf.media_set_id = bs.media_set_id\nORDER BY bs.backup_finish_date DESC;"},
+mg:NA('No server-side backup history; check your backup tool or the Atlas backup UI.'),
+ml:NA('No built-in history query. Check the backup directories or scheduled backups in the Admin UI.')},
+
+{id:'backup-verify',cat:'backup',t:'Verify a backup',k:'verify backup validate check backup integrity verifyonly',
+pg:{c:"pg_restore --list {db}.dump",l:'shell',n:'Reads the archive table of contents. The only real test is a restore into a scratch database.'},
+ms:{c:"RESTORE VERIFYONLY\nFROM DISK = N'{backup_file}'\nWITH CHECKSUM;",n:'Checks the media is readable; it does not replace a test restore + DBCC CHECKDB.'},
+mg:NA('No verify option; do a test mongorestore into a scratch instance.'),
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:database-backup-validate(\n  xdmp:database-forests(xdmp:database(\"{db}\")),\n  \"{backup_dir}\")",n:'XQuery. Checks that a backup to that path would succeed (permissions, space); it does not check an existing backup.'}},
+
+{id:'restore-filelist',cat:'backup',t:'Inspect backup contents before restoring',k:'filelistonly headeronly backup contents what is in backup',
+pg:{c:"pg_restore --list {db}.dump",l:'shell'},
+ms:{c:"RESTORE HEADERONLY FROM DISK = N'{backup_file}';\nRESTORE FILELISTONLY FROM DISK = N'{backup_file}';"},
+mg:{c:"mongorestore --uri=\"{uri}\" --gzip --archive={db}.archive.gz \\\n  --dryRun --verbose",l:'shell',n:'--dryRun shows what would be restored without writing.'},
+ml:NA('No equivalent.')},
+
+{id:'restore',cat:'backup',danger:1,t:'Restore a database',k:'restore database recover from backup pg_restore mongorestore overwrite',
+pg:{c:"pg_restore -h {host} -U {user} -d {db} \\\n  --clean --if-exists -j 4 \\\n  {db}.dump",l:'shell',d:1,n:'--clean drops objects before recreating them. Aurora snapshots restore to a NEW cluster: aws rds restore-db-cluster-from-snapshot.'},
+ms:{c:"RESTORE DATABASE [{db}]\nFROM DISK = N'{backup_file}'\nWITH REPLACE, RECOVERY, STATS = 10;",d:1,n:'REPLACE overwrites the existing database. Add MOVE \'logical_name\' TO \'new_path\' if file paths differ (see RESTORE FILELISTONLY).'},
+mg:{c:"mongorestore --uri=\"{uri}\" \\\n  --gzip --archive={db}.archive.gz \\\n  --drop",l:'shell',d:1,n:'--drop drops each collection before restoring it.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:database-restore(\n  xdmp:database-forests(xdmp:database(\"{db}\")),\n  \"{backup_dir}\")",d:1,n:'XQuery. Replaces forest contents; the forests are unavailable during the restore.'}},
+
+{id:'restore-pitr',cat:'backup',danger:1,t:'Point-in-time restore',k:'point in time restore pitr stopat recover to time',
+pg:{c:"aws rds restore-db-cluster-to-point-in-time \\\n  --source-db-cluster-identifier {cluster} \\\n  --db-cluster-identifier {new_cluster} \\\n  --restore-to-time {utc_time}\n\n# then add an instance to the new cluster:\naws rds create-db-instance \\\n  --db-cluster-identifier {new_cluster} \\\n  --db-instance-identifier {new_cluster}-1 \\\n  --db-instance-class {instance_class} \\\n  --engine aurora-postgresql",l:'shell',n:'Creates a new cluster (with no instances) and leaves the source untouched. Time format: 2026-10-21T03:00:00Z.'},
+ms:{c:"RESTORE DATABASE [{db}]\nFROM DISK = N'{backup_file}'\nWITH NORECOVERY, REPLACE;\n\nRESTORE LOG [{db}]\nFROM DISK = N'{log_file}'\nWITH STOPAT = '{stop_time}', RECOVERY;",d:1,n:'Restore every log backup in sequence WITH NORECOVERY and use STOPAT on the last one. Restoring under a new name avoids overwriting production.'},
+mg:{c:"mongorestore --uri=\"{uri}\" \\\n  --oplogReplay --oplogLimit={timestamp}:{ordinal} \\\n  {dump_dir}",l:'shell',d:1,n:'Needs a dump taken with --oplog. Atlas / Ops Manager offer PITR from the UI.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:database-restore(\n  xdmp:database-forests(xdmp:database(\"{db}\")),\n  \"{backup_dir}\",\n  xs:dateTime(\"{restore_time}\"),\n  fn:true())",d:1,n:'XQuery. Needs backups taken with journal archiving; the 4th argument enables journal archiving.'}},
+
+{id:'restore-table',cat:'backup',danger:1,t:'Restore a single table / collection',k:'restore one table single table restore collection partial restore',
+pg:{c:"pg_restore -h {host} -U {user} -d {db} \\\n  -n {schema} -t {table} \\\n  {db}.dump",l:'shell',d:1,n:'Restores just that table (definition + data). Its indexes, constraints and triggers are not included with -t.'},
+ms:NA('No table-level restore. Restore the backup as a new database (RESTORE ... WITH MOVE) and copy the rows back.'),
+mg:{c:"mongorestore --uri=\"{uri}\" \\\n  --gzip --archive={db}.archive.gz \\\n  --nsInclude=\"{db}.{collection}\"",l:'shell',d:1},
+ml:NA('Restore works per forest. Restore into a scratch database and copy the documents back.')},
+/* ===== Users & permissions ===== */
+{id:'list-users',cat:'users',t:'List users / logins / roles',k:'list users logins roles accounts du',
+pg:{c:"SELECT rolname, rolsuper, rolcanlogin,\n       rolcreaterole, rolcreatedb, rolvaliduntil\nFROM pg_roles\nWHERE rolname !~ '^pg_'\nORDER BY rolname;",n:'In psql: \\du. On Aurora you also see the internal rds* roles.'},
+ms:{c:"SELECT name, type_desc, is_disabled, create_date,\n       default_database_name\nFROM sys.server_principals\nWHERE type IN ('S', 'U', 'G')\nORDER BY name;\n\n-- database users:\nSELECT name, type_desc, authentication_type_desc\nFROM sys.database_principals\nWHERE type IN ('S', 'U', 'G', 'E', 'X');"},
+mg:{c:"db.getSiblingDB(\"{authdb}\").getUsers()",n:'Users defined in that auth database (usually admin).'},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/users?format=json\"",l:'curl'}},
+
+{id:'create-user',cat:'users',t:'Create a user / login',k:'create user add user new login create role',
+pg:{c:"CREATE ROLE {user} WITH LOGIN PASSWORD '{password}';",n:'Then use \\password {user} in psql if you do not want the password in logs or history.'},
+ms:{c:"CREATE LOGIN [{user}] WITH PASSWORD = N'{password}', CHECK_POLICY = ON;\nGO\nUSE [{db}];\nCREATE USER [{user}] FOR LOGIN [{user}];"},
+mg:{c:"db.getSiblingDB(\"{db}\").createUser({\n  user: \"{user}\",\n  pwd: passwordPrompt(),\n  roles: [ { role: \"readWrite\", db: \"{db}\" } ]\n})",v:'passwordPrompt(): mongosh / 4.2+'},
+ml:{c:"curl --anyauth -u {admin} -X POST \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"user-name\":\"{user}\",\"password\":\"{password}\",\"role\":[\"{role}\"]}' \\\n  \"http://{host}:8002/manage/v2/users\"",l:'curl'}},
+
+{id:'grant-readonly',cat:'users',t:'Grant read-only access',k:'grant read only select datareader read access permission',
+pg:{c:"GRANT CONNECT ON DATABASE {db} TO {user};\nGRANT USAGE ON SCHEMA {schema} TO {user};\nGRANT SELECT ON ALL TABLES IN SCHEMA {schema} TO {user};\nALTER DEFAULT PRIVILEGES IN SCHEMA {schema}\n  GRANT SELECT ON TABLES TO {user};",n:'ALTER DEFAULT PRIVILEGES only covers tables later created by the role that runs it (add FOR ROLE owner). PostgreSQL 14+ also has pg_read_all_data.'},
+ms:{c:"USE [{db}];\nALTER ROLE db_datareader ADD MEMBER [{user}];",v:'SQL Server 2012+ (older: sp_addrolemember)'},
+mg:{c:"db.getSiblingDB(\"{authdb}\").grantRolesToUser(\"{user}\", [\n  { role: \"read\", db: \"{db}\" }\n])",n:'Run against the database where the user was created.'},
+ml:{c:"curl --anyauth -u {admin} -X PUT \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"role\":[\"{role}\"]}' \\\n  \"http://{host}:8002/manage/v2/users/{user}/properties\"",l:'curl',n:'The role list you send replaces the existing roles; include every role the user should keep.'}},
+
+{id:'user-perms',cat:'users',t:'Check a user\'s permissions and role membership',k:'permissions privileges grants what can user do role membership effective permissions',
+pg:{c:"-- role memberships\nSELECT r.rolname AS member_of\nFROM pg_auth_members m\nJOIN pg_roles r ON r.oid = m.roleid\nJOIN pg_roles u ON u.oid = m.member\nWHERE u.rolname = '{user}';\n\n-- table grants\nSELECT table_schema, table_name, privilege_type\nFROM information_schema.role_table_grants\nWHERE grantee = '{user}';"},
+ms:{c:"USE [{db}];\nEXECUTE AS USER = N'{user}';\nSELECT * FROM fn_my_permissions(NULL, 'DATABASE');\nREVERT;"},
+mg:{c:"db.getSiblingDB(\"{authdb}\").getUser(\"{user}\", { showPrivileges: true })"},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/users/{user}/properties?format=json\"",l:'curl'}},
+
+{id:'reset-password',cat:'users',t:'Reset a password',k:'reset password change password alter login',
+pg:{c:"ALTER ROLE {user} WITH PASSWORD '{password}';",n:'In psql prefer \\password {user}: it sends the password hashed so it is not logged.'},
+ms:{c:"ALTER LOGIN [{user}] WITH PASSWORD = N'{password}';"},
+mg:{c:"db.getSiblingDB(\"{authdb}\").changeUserPassword(\"{user}\", passwordPrompt())"},
+ml:{c:"curl --anyauth -u {admin} -X PUT \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"password\":\"{password}\"}' \\\n  \"http://{host}:8002/manage/v2/users/{user}/properties\"",l:'curl'}},
+
+{id:'unlock-login',cat:'users',t:'Unlock a locked-out login',k:'unlock locked out account locked login lockout',
+pg:NA('PostgreSQL has no account lockout. Check rolvaliduntil (expired) and rolcanlogin, then ALTER ROLE ... VALID UNTIL \'infinity\' or ALTER ROLE ... LOGIN.'),
+ms:{c:"-- check state first:\nSELECT LOGINPROPERTY(N'{user}', 'IsLocked') AS is_locked;\n\nALTER LOGIN [{user}] WITH PASSWORD = N'{password}' UNLOCK;",n:'SQL logins with CHECK_POLICY = ON only. Windows logins are locked in AD.'},
+mg:NA('No lockout feature in MongoDB authentication.'),
+ml:NA('No built-in lockout (external auth such as LDAP may lock accounts).')},
+
+{id:'admin-members',cat:'users',t:'Who has superuser / sysadmin',k:'superuser sysadmin admin root who has admin privileged users rds_superuser',
+pg:{c:"SELECT rolname,\n       rolsuper,\n       pg_has_role(rolname, 'rds_superuser', 'member') AS rds_superuser\nFROM pg_roles\nWHERE rolcanlogin\nORDER BY rolname;",n:'rds_superuser exists only on RDS/Aurora (remove that column elsewhere). The real superuser on Aurora, rdsadmin, belongs to AWS.'},
+ms:{c:"SELECT p.name, p.type_desc, p.is_disabled\nFROM sys.server_role_members rm\nJOIN sys.server_principals r ON r.principal_id = rm.role_principal_id\nJOIN sys.server_principals p ON p.principal_id = rm.member_principal_id\nWHERE r.name = 'sysadmin';"},
+mg:{c:"db.getSiblingDB(\"admin\").system.users.find(\n  { \"roles.role\": { $in: [\"root\", \"userAdminAnyDatabase\", \"dbAdminAnyDatabase\"] } },\n  { user: 1, db: 1, roles: 1 }\n)",n:'Reading system.users needs user-admin privileges.'},
+ml:NA('No single query. List users via the Management API (/manage/v2/users) and check which have the "admin" role.')},
+
+{id:'orphan-users',cat:'users',t:'Find and fix orphaned database users',k:'orphaned users sid mismatch after restore fix user login mapping',
+pg:NA('Not applicable; roles are cluster-wide, not per database.'),
+ms:{c:"USE [{db}];\nSELECT dp.name, dp.sid\nFROM sys.database_principals dp\nLEFT JOIN sys.server_principals sp ON sp.sid = dp.sid\nWHERE sp.sid IS NULL\n  AND dp.type = 'S'\n  AND dp.authentication_type_desc = 'INSTANCE';\n\n-- fix:\nALTER USER [{user}] WITH LOGIN = [{user}];",n:'Typical after restoring a database onto another server.'},
+mg:NA('Not applicable.'),
+ml:NA('Not applicable.')},
+
+{id:'drop-user',cat:'users',danger:1,t:'Drop a user',k:'drop user delete user remove login',
+pg:{c:"REASSIGN OWNED BY {user} TO {new_owner};\nDROP OWNED BY {user};\nDROP ROLE {user};",d:1,n:'Run REASSIGN OWNED and DROP OWNED in every database where the role owns objects or holds grants.'},
+ms:{c:"USE [{db}];\nDROP USER [{user}];\nGO\nDROP LOGIN [{user}];",d:1,n:'Fails if the user owns schemas; transfer them first (ALTER AUTHORIZATION).'},
+mg:{c:"db.getSiblingDB(\"{authdb}\").dropUser(\"{user}\")",d:1},
+ml:{c:"curl --anyauth -u {admin} -X DELETE \\\n  \"http://{host}:8002/manage/v2/users/{user}\"",l:'curl',d:1}},
+
+/* ===== Storage & size ===== */
+{id:'db-sizes',cat:'storage',t:'Database sizes',k:'database size db size how big space used disk usage',
+pg:{c:"SELECT datname,\n       pg_size_pretty(pg_database_size(datname)) AS size\nFROM pg_database\nORDER BY pg_database_size(datname) DESC;",n:'Aurora bills the cluster volume (CloudWatch VolumeBytesUsed), which can be larger than the sum of DB sizes.'},
+ms:{c:"SELECT DB_NAME(database_id) AS db,\n       type_desc,\n       SUM(CAST(size AS bigint)) * 8 / 1024 AS size_mb\nFROM sys.master_files\nGROUP BY database_id, type_desc\nORDER BY size_mb DESC;"},
+mg:{c:"db.adminCommand({ listDatabases: 1 })",n:'sizeOnDisk per database. Shortcut: show dbs'},
+ml:{c:"xquery version \"1.0-ml\";\nfn:sum(\n  for $f in xdmp:database-forests(xdmp:database(\"{db}\"))\n  return xdmp:forest-status($f)//*:stand/*:disk-size\n)",n:'XQuery. Sum of stand disk-size in MB (master forests only). Also in the Management API: /manage/v2/databases/{db}?view=status'}},
+
+{id:'table-sizes',cat:'storage',tri:1,t:'Largest tables / collections',k:'table size biggest tables largest tables collection size top tables',
+pg:{c:"SELECT schemaname, relname,\n       pg_size_pretty(pg_total_relation_size(relid)) AS total,\n       pg_size_pretty(pg_relation_size(relid)) AS heap,\n       pg_size_pretty(pg_indexes_size(relid)) AS indexes\nFROM pg_catalog.pg_statio_user_tables\nORDER BY pg_total_relation_size(relid) DESC\nLIMIT 20;",n:'total includes TOAST and indexes.'},
+ms:{c:"SELECT TOP 20 s.name + '.' + t.name AS table_name,\n       SUM(ps.reserved_page_count) * 8 / 1024 AS reserved_mb,\n       SUM(CASE WHEN ps.index_id IN (0, 1) THEN ps.row_count END) AS row_count\nFROM sys.dm_db_partition_stats ps\nJOIN sys.tables t ON t.object_id = ps.object_id\nJOIN sys.schemas s ON s.schema_id = t.schema_id\nGROUP BY s.name, t.name\nORDER BY reserved_mb DESC;"},
+mg:{c:"db.getCollectionInfos({ type: \"collection\" }).map(ci => {\n  const s = db.getCollection(ci.name)\n    .aggregate([{ $collStats: { storageStats: { scale: 1048576 } } }])\n    .next().storageStats;\n  return { coll: ci.name, storageMB: s.storageSize, indexMB: s.totalIndexSize, docs: s.count };\n}).sort((a, b) => b.storageMB - a.storageMB)",n:'Current database only; skips views.'},
+ml:{c:"xquery version \"1.0-ml\";\nfor $c in cts:collections()\nlet $n := xdmp:estimate(fn:collection($c))\norder by $n descending\nreturn fn:concat($c, \" : \", $n)",n:'XQuery. Document counts per collection (no per-collection byte size in MarkLogic). Needs the collection lexicon enabled.'}},
+
+{id:'one-table-size',cat:'storage',t:'Size of one table / collection',k:'size of table table size specific collection size spaceused',
+pg:{c:"SELECT pg_size_pretty(pg_total_relation_size('{schema}.{table}')) AS total,\n       pg_size_pretty(pg_relation_size('{schema}.{table}')) AS heap,\n       pg_size_pretty(pg_indexes_size('{schema}.{table}')) AS indexes;"},
+ms:{c:"EXEC sp_spaceused N'{schema}.{table}';"},
+mg:{c:"db.{collection}.stats({ scale: 1048576 })",n:'size, storageSize and totalIndexSize in MB.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:estimate(fn:collection(\"{collection}\"))",n:'XQuery. Document count only.'}},
+
+{id:'row-counts',cat:'storage',t:'Row / document counts (fast estimate)',k:'row count number of rows count documents estimate',
+pg:{c:"SELECT schemaname, relname, n_live_tup\nFROM pg_stat_user_tables\nORDER BY n_live_tup DESC;",n:'Statistics estimate. Exact count needs a full scan: SELECT count(*) FROM ...'},
+ms:{c:"SELECT OBJECT_SCHEMA_NAME(object_id) AS sch, OBJECT_NAME(object_id) AS tbl,\n       SUM(row_count) AS row_count\nFROM sys.dm_db_partition_stats\nWHERE index_id IN (0, 1)\n  AND OBJECTPROPERTY(object_id, 'IsUserTable') = 1\nGROUP BY object_id\nORDER BY row_count DESC;"},
+mg:{c:"db.{collection}.estimatedDocumentCount()",n:'Metadata-based. Exact with a filter: countDocuments({...})'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:estimate(fn:doc())",n:'XQuery. Documents in the current database (index-resolved, fast).'}},
+
+{id:'free-space',cat:'storage',tri:1,t:'Disk / file free space',k:'free space disk full out of space file size data file storage left',
+pg:{c:"aws cloudwatch get-metric-statistics \\\n  --namespace AWS/RDS --metric-name FreeLocalStorage \\\n  --dimensions Name=DBInstanceIdentifier,Value={instance} \\\n  --start-time {start_time} --end-time {end_time} \\\n  --period 300 --statistics Minimum",l:'shell',n:'The Aurora cluster volume grows automatically (up to 128 TiB). FreeLocalStorage is the instance\'s local temp storage, which fills from big sorts and temp files.'},
+ms:{c:"USE [{db}];\nSELECT name, type_desc, physical_name,\n       size / 128.0 AS size_mb,\n       size / 128.0 - FILEPROPERTY(name, 'SpaceUsed') / 128.0 AS free_mb\nFROM sys.database_files;\n\n-- volume free space:\nSELECT DISTINCT vs.volume_mount_point,\n       vs.available_bytes / 1073741824 AS free_gb,\n       vs.total_bytes / 1073741824 AS total_gb\nFROM sys.master_files mf\nCROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) vs;"},
+mg:{c:"db.stats({ scale: 1073741824 })",v:'fsUsedSize/fsTotalSize: MongoDB 3.6+',n:'fsUsedSize / fsTotalSize describe the volume holding dbPath (GB with this scale).'},
+ml:{c:"xquery version \"1.0-ml\";\nfor $f in xdmp:database-forests(xdmp:database(\"{db}\"))\nlet $s := xdmp:forest-status($f)\nreturn fn:concat($s/*:forest-name, \" free MB: \", $s/*:device-space)",n:'XQuery. device-space = free MB on the forest\'s device. MarkLogic needs headroom for merges.'}},
+
+{id:'log-space',cat:'storage',tri:1,t:'Transaction log / WAL / oplog usage',k:'log full transaction log full wal size log space log_reuse_wait oplog size',
+pg:{c:"SELECT slot_name, active,\n       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal\nFROM pg_replication_slots;",v:'PostgreSQL 10+ function names',n:'Aurora keeps WAL in shared storage; the usual cause of growth is an inactive logical replication slot (CloudWatch TransactionLogsDiskUsage, OldestReplicationSlotLag).'},
+ms:{c:"DBCC SQLPERF (LOGSPACE);\n\n-- why is the log not truncating?\nSELECT name, recovery_model_desc, log_reuse_wait_desc\nFROM sys.databases;"},
+mg:{c:"rs.printReplicationInfo()",n:'Oplog size and the time window it covers.'},
+ml:NA('Journals are fixed-size and managed automatically per forest.')},
+
+{id:'bloat',cat:'storage',t:'Dead rows / bloat / reclaimable space',k:'bloat dead tuples dead rows reclaimable space deleted fragments',
+pg:{c:"SELECT schemaname, relname, n_live_tup, n_dead_tup,\n       round(100.0 * n_dead_tup / nullif(n_live_tup + n_dead_tup, 0), 1) AS dead_pct,\n       last_autovacuum\nFROM pg_stat_user_tables\nORDER BY n_dead_tup DESC\nLIMIT 20;",n:'Exact numbers: pgstattuple extension (supported on Aurora).'},
+ms:NA('No MVCC bloat (apart from version store / ghost records). See "Index fragmentation".'),
+mg:{c:"db.{collection}.stats().wiredTiger[\"block-manager\"][\"file bytes available for reuse\"]",n:'Bytes WiredTiger can reuse; compact releases them to the OS.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:forest-counts(xdmp:forest(\"{forest}\"))",n:'XQuery. Active vs deleted fragments; merges reclaim deleted ones.'}},
+
+{id:'shrink',cat:'storage',danger:1,t:'Reclaim space (shrink / compact)',k:'shrink compact reclaim space vacuum full release space',
+pg:{c:"VACUUM (FULL, VERBOSE) {schema}.{table};",d:1,n:'Takes an ACCESS EXCLUSIVE lock and rewrites the table (needs free space about the table size). pg_repack (supported on Aurora) does it online.'},
+ms:{c:"USE [{db}];\nDBCC SHRINKFILE (N'{logical_file}', {target_mb});",d:1,n:'Shrinking data files badly fragments indexes; mostly for log files or after a one-off purge.'},
+mg:{c:"db.runCommand({ compact: \"{collection}\" })",d:1,n:'Blocking before 4.4. Run on secondaries first, then step down the primary.'},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:merge()",d:1,n:'XQuery. Forces a merge of the context database\'s forests; heavy I/O and needs free disk headroom.'}},
+/* ===== Replication & HA ===== */
+{id:'repl-status',cat:'repl',tri:1,t:'Replication / HA status',k:'replication status replica status availability group health replica set status ag status',
+pg:{c:"SELECT server_id, session_id,\n       replica_lag_in_msec,\n       durable_lsn, highest_lsn_rcvd,\n       last_update_timestamp\nFROM aurora_replica_status();",v:'Aurora PostgreSQL only',n:'The writer row has session_id = \'MASTER_SESSION_ID\'. Community PostgreSQL: SELECT * FROM pg_stat_replication; on the primary.'},
+ms:{c:"SELECT ag.name AS ag_name, ar.replica_server_name,\n       DB_NAME(drs.database_id) AS db,\n       drs.is_primary_replica,\n       drs.synchronization_state_desc,\n       drs.synchronization_health_desc,\n       drs.log_send_queue_size, drs.redo_queue_size\nFROM sys.dm_hadr_database_replica_states drs\nJOIN sys.availability_replicas ar ON ar.replica_id = drs.replica_id\nJOIN sys.availability_groups ag ON ag.group_id = drs.group_id\nORDER BY ag.name, ar.replica_server_name;",n:'Run on the primary to see all replicas. Queue sizes are in KB.'},
+mg:{c:"rs.status()"},
+ml:{c:"xquery version \"1.0-ml\";\nfor $f in xdmp:database-forests(xdmp:database(\"{db}\"), fn:true())\nlet $s := xdmp:forest-status($f)\nreturn fn:concat($s/*:forest-name, \" : \", $s/*:state)",n:'XQuery. fn:true() includes local-disk failover replica forests. States: open, open replica, sync replicating, etc.'}},
+
+{id:'repl-lag',cat:'repl',tri:1,t:'Replication lag',k:'replication lag replica lag behind delay secondary lag standby delay',
+pg:{c:"SELECT server_id, replica_lag_in_msec\nFROM aurora_replica_status()\nWHERE session_id <> 'MASTER_SESSION_ID';",v:'Aurora PostgreSQL only',n:'Also CloudWatch AuroraReplicaLag. Community PG standby: SELECT now() - pg_last_xact_replay_timestamp();'},
+ms:{c:"SELECT ar.replica_server_name, DB_NAME(drs.database_id) AS db,\n       drs.log_send_queue_size, drs.log_send_rate,\n       drs.redo_queue_size, drs.redo_rate,\n       drs.last_commit_time\nFROM sys.dm_hadr_database_replica_states drs\nJOIN sys.availability_replicas ar ON ar.replica_id = drs.replica_id;",n:'Lag ≈ primary last_commit_time minus secondary last_commit_time, or redo_queue_size / redo_rate seconds.'},
+mg:{c:"rs.printSecondaryReplicationInfo()",v:'mongosh / 4.4.1+ (legacy shell: rs.printSlaveReplicationInfo())'},
+ml:NA('Local-disk failover replicas are synchronous. For database (foreign) replication check lag in the Admin UI or the Management API database status.')},
+
+{id:'primary-check',cat:'repl',t:'Which node is primary / writer?',k:'primary writer master which node is primary am i on primary read only replica',
+pg:{c:"SELECT pg_is_in_recovery() AS is_reader,\n       aurora_db_instance_identifier() AS instance;\n\nSELECT server_id AS writer\nFROM aurora_replica_status()\nWHERE session_id = 'MASTER_SESSION_ID';",v:'aurora_* functions: Aurora PostgreSQL only',n:'pg_is_in_recovery() = false means you are on the writer.'},
+ms:{c:"SELECT ag.name, ar.replica_server_name, ars.role_desc,\n       ars.connected_state_desc, ars.synchronization_health_desc\nFROM sys.dm_hadr_availability_replica_states ars\nJOIN sys.availability_replicas ar ON ar.replica_id = ars.replica_id\nJOIN sys.availability_groups ag ON ag.group_id = ars.group_id;"},
+mg:{c:"db.hello().primary",v:'MongoDB 5.0+ / 4.4.2+ (older: db.isMaster().primary)'},
+ml:NA('No cluster-wide primary; each forest has its own master/replica state (see "Replication / HA status").')},
+
+{id:'repl-config',cat:'repl',t:'Replication / cluster configuration',k:'replica configuration rs conf availability replicas mode failover mode members priority',
+pg:{c:"aws rds describe-db-clusters \\\n  --db-cluster-identifier {cluster} \\\n  --query \"DBClusters[0].DBClusterMembers\"",l:'shell',n:'Shows instances, IsClusterWriter and PromotionTier (failover priority).'},
+ms:{c:"SELECT ag.name, ar.replica_server_name,\n       ar.availability_mode_desc, ar.failover_mode_desc,\n       ar.secondary_role_allow_connections_desc,\n       ar.endpoint_url\nFROM sys.availability_replicas ar\nJOIN sys.availability_groups ag ON ag.group_id = ar.group_id;"},
+mg:{c:"rs.conf()"},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/databases/{db}/properties?format=json\"",l:'curl',n:'Includes forests and database-replication settings.'}},
+
+{id:'cluster-nodes',cat:'repl',tri:1,t:'Cluster nodes / hosts health',k:'nodes hosts members cluster health down node instance status',
+pg:{c:"aws rds describe-db-instances \\\n  --filters Name=db-cluster-id,Values={cluster} \\\n  --query \"DBInstances[].[DBInstanceIdentifier,DBInstanceStatus,DBInstanceClass,AvailabilityZone]\" \\\n  --output table",l:'shell'},
+ms:{c:"SELECT member_name, member_type_desc, member_state_desc\nFROM sys.dm_hadr_cluster_members;",n:'WSFC / Pacemaker cluster member state as seen by SQL Server.'},
+mg:{c:"rs.status().members.map(m => ({\n  name: m.name, state: m.stateStr, health: m.health,\n  lastHeartbeat: m.lastHeartbeat\n}))"},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/hosts?view=status&format=json\"",l:'curl'}},
+
+{id:'repl-slots',cat:'repl',t:'Replication slots / CDC',k:'replication slot logical replication cdc inactive slot subscription publication',
+pg:{c:"SELECT slot_name, plugin, slot_type, database, active,\n       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal\nFROM pg_replication_slots;",v:'PostgreSQL 10+',n:'Inactive slots retain WAL indefinitely. Dropping one (pg_drop_replication_slot) breaks its consumer.'},
+ms:{c:"SELECT name, is_published, is_subscribed, is_cdc_enabled\nFROM sys.databases;",n:'SQL Server has no slots; this shows which DBs use replication or CDC.'},
+mg:NA('Change streams are oplog cursors; there are no slots.'),
+ml:NA('No equivalent.')},
+
+{id:'oplog-window',cat:'repl',t:'Oplog / restore retention window',k:'oplog window replication window how far back retention',
+pg:{c:"aws rds describe-db-clusters \\\n  --db-cluster-identifier {cluster} \\\n  --query \"DBClusters[0].[BackupRetentionPeriod,EarliestRestorableTime,LatestRestorableTime]\"",l:'shell',n:'Closest Aurora concept: the PITR window.'},
+ms:NA('Log retention depends on log backups; see log_reuse_wait_desc in "Transaction log usage".'),
+mg:{c:"rs.printReplicationInfo()"},
+ml:NA('No equivalent.')},
+
+{id:'failover',cat:'repl',danger:1,t:'Manual failover / switchover',k:'failover switchover promote step down manual failover',
+pg:{c:"aws rds failover-db-cluster \\\n  --db-cluster-identifier {cluster} \\\n  --target-db-instance-identifier {instance}",l:'shell',d:1,n:'Short outage (usually under a minute); every connection drops. Apps should use the cluster endpoint.'},
+ms:{c:"-- run on the target SECONDARY (synchronous-commit, SYNCHRONIZED):\nALTER AVAILABILITY GROUP [{ag}] FAILOVER;",d:1,n:'Planned failover without data loss. FORCE_FAILOVER_ALLOW_DATA_LOSS is for disasters only.'},
+mg:{c:"rs.stepDown()",d:1,n:'Run on the primary. Default stepDownSecs is 60. Connections are closed.'},
+ml:NA('Forest failover is automatic. For planned moves restart the host or fail forests back via the Admin UI.')},
+
+/* ===== Indexes ===== */
+{id:'list-indexes',cat:'index',t:'List indexes on a table / collection',k:'list indexes show indexes index definition getIndexes helpindex',
+pg:{c:"SELECT indexname, indexdef\nFROM pg_indexes\nWHERE schemaname = '{schema}'\n  AND tablename = '{table}';",n:'In psql: \\d schema.table'},
+ms:{c:"EXEC sp_helpindex N'{schema}.{table}';"},
+mg:{c:"db.{collection}.getIndexes()"},
+ml:{c:"xquery version \"1.0-ml\";\nimport module namespace admin = \"http://marklogic.com/xdmp/admin\"\n  at \"/MarkLogic/admin.xqy\";\nadmin:database-get-range-element-indexes(\n  admin:get-configuration(), xdmp:database(\"{db}\"))",n:'XQuery. Range element indexes; similar functions exist for path and field indexes.'}},
+
+{id:'create-index',cat:'index',t:'Create an index (online)',k:'create index add index new index online concurrently',
+pg:{c:"CREATE INDEX CONCURRENTLY {index}\n  ON {schema}.{table} ({column});",n:'Cannot run inside a transaction block. A failed build leaves an INVALID index to drop.'},
+ms:{c:"CREATE NONCLUSTERED INDEX [{index}]\n  ON [{schema}].[{table}] ([{column}])\n  WITH (ONLINE = ON);",n:'ONLINE = ON needs Enterprise (or Developer / Azure SQL).'},
+mg:{c:"db.{collection}.createIndex({ {field}: 1 })",n:'4.2+ uses an optimized build that holds exclusive locks only at the start and end.'},
+ml:{c:"xquery version \"1.0-ml\";\nimport module namespace admin = \"http://marklogic.com/xdmp/admin\"\n  at \"/MarkLogic/admin.xqy\";\nlet $config := admin:get-configuration()\nlet $idx := admin:database-range-element-index(\n  \"string\", \"{namespace}\", \"{element}\",\n  \"http://marklogic.com/collation/\", fn:false())\nreturn admin:save-configuration(\n  admin:database-add-range-element-index($config, xdmp:database(\"{db}\"), $idx))",n:'XQuery. Triggers reindexing. Leave namespace empty for no namespace.'}},
+
+{id:'unused-indexes',cat:'index',t:'Unused indexes',k:'unused indexes never used index usage drop candidates',
+pg:{c:"SELECT s.schemaname, s.relname, s.indexrelname, s.idx_scan,\n       pg_size_pretty(pg_relation_size(s.indexrelid)) AS size\nFROM pg_stat_user_indexes s\nJOIN pg_index i ON i.indexrelid = s.indexrelid\nWHERE s.idx_scan = 0\n  AND NOT i.indisunique\nORDER BY pg_relation_size(s.indexrelid) DESC;",n:'Counters are per instance: on Aurora check the readers too before dropping.'},
+ms:{c:"SELECT OBJECT_NAME(i.object_id) AS table_name, i.name AS index_name,\n       us.user_seeks, us.user_scans, us.user_lookups, us.user_updates\nFROM sys.indexes i\nLEFT JOIN sys.dm_db_index_usage_stats us\n  ON us.object_id = i.object_id AND us.index_id = i.index_id\n AND us.database_id = DB_ID()\nWHERE OBJECTPROPERTY(i.object_id, 'IsUserTable') = 1\n  AND i.index_id > 1\n  AND i.is_primary_key = 0 AND i.is_unique_constraint = 0\n  AND ISNULL(us.user_seeks, 0) + ISNULL(us.user_scans, 0) + ISNULL(us.user_lookups, 0) = 0;",n:'Usage stats reset on restart; check uptime first.'},
+mg:{c:"db.{collection}.aggregate([ { $indexStats: {} } ])",n:'accesses.ops = 0 since accesses.since means unused on that node.'},
+ml:NA('No index usage statistics.')},
+
+{id:'missing-indexes',cat:'index',t:'Missing index suggestions',k:'missing indexes index suggestions recommend index',
+pg:NA('No built-in advisor. Look at seq_scan in pg_stat_user_tables and slow queries; hypopg (supported on Aurora) tests hypothetical indexes.'),
+ms:{c:"SELECT TOP 20 mid.statement,\n       mid.equality_columns, mid.inequality_columns, mid.included_columns,\n       migs.user_seeks, migs.avg_user_impact\nFROM sys.dm_db_missing_index_details mid\nJOIN sys.dm_db_missing_index_groups mig ON mig.index_handle = mid.index_handle\nJOIN sys.dm_db_missing_index_group_stats migs ON migs.group_handle = mig.index_group_handle\nORDER BY migs.user_seeks * migs.avg_user_impact DESC;",n:'Suggestions only: they overlap and ignore existing indexes. Review before creating.'},
+mg:{c:"db.system.profile.find({ planSummary: \"COLLSCAN\" }).sort({ millis: -1 })",n:'Collection scans in the profiler point to missing indexes. Atlas has a Performance Advisor.'},
+ml:NA('No equivalent.')},
+
+{id:'fragmentation',cat:'index',t:'Index fragmentation / health',k:'fragmentation fragmented index index health pgstatindex',
+pg:{c:"CREATE EXTENSION IF NOT EXISTS pgstattuple;\nSELECT * FROM pgstatindex('{schema}.{index}');",n:'B-tree only. Low avg_leaf_density suggests bloat.'},
+ms:{c:"SELECT OBJECT_NAME(ips.object_id) AS table_name, i.name AS index_name,\n       ips.avg_fragmentation_in_percent, ips.page_count\nFROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'LIMITED') ips\nJOIN sys.indexes i ON i.object_id = ips.object_id AND i.index_id = ips.index_id\nWHERE ips.page_count > 1000\nORDER BY ips.avg_fragmentation_in_percent DESC;",n:'LIMITED is the cheapest scan mode.'},
+mg:NA('Not tracked for indexes.'),
+ml:NA('Not applicable; merges keep stands compact.')},
+
+{id:'rebuild-index',cat:'index',t:'Rebuild / reorganize an index',k:'rebuild index reindex reorganize defragment',
+pg:{c:"REINDEX INDEX CONCURRENTLY {schema}.{index};",v:'CONCURRENTLY: PostgreSQL 12+',n:'Without CONCURRENTLY, REINDEX blocks writes to the table.'},
+ms:{c:"ALTER INDEX [{index}] ON [{schema}].[{table}]\n  REBUILD WITH (ONLINE = ON);\n\n-- lighter, always online:\nALTER INDEX [{index}] ON [{schema}].[{table}] REORGANIZE;",n:'ONLINE rebuild needs Enterprise. Common rule of thumb: reorganize 5-30%, rebuild above 30%.'},
+mg:NA('reIndex() is deprecated and only for standalone mongod. Drop and recreate the index instead.'),
+ml:NA('Reindexing runs automatically after index configuration changes (reindexer-enable on the database).')},
+
+{id:'index-progress',cat:'index',t:'Index build progress',k:'index build progress create index progress reindex progress',
+pg:{c:"SELECT pid, datname, relid::regclass, phase,\n       blocks_done, blocks_total,\n       tuples_done, tuples_total\nFROM pg_stat_progress_create_index;",v:'PostgreSQL 12+'},
+ms:{c:"SELECT session_id, command, percent_complete, start_time\nFROM sys.dm_exec_requests\nWHERE command IN ('CREATE INDEX', 'ALTER INDEX');\n\n-- resumable operations (2017+):\nSELECT name, state_desc, percent_complete\nFROM sys.index_resumable_operations;",n:'percent_complete is often 0 for normal builds; it is reliable for RESUMABLE = ON builds.'},
+mg:{c:"db.adminCommand({\n  currentOp: true,\n  $or: [\n    { op: \"command\", \"command.createIndexes\": { $exists: true } },\n    { op: \"none\", \"msg\": /^Index Build/ }\n  ]\n})"},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/databases/{db}?view=status&format=json\"",l:'curl',n:'Look for the reindexing / merging fields in the status output.'}},
+
+{id:'drop-index',cat:'index',danger:1,t:'Drop an index',k:'drop index remove index delete index',
+pg:{c:"DROP INDEX CONCURRENTLY {schema}.{index};",d:1},
+ms:{c:"DROP INDEX [{index}] ON [{schema}].[{table}];",d:1},
+mg:{c:"db.{collection}.dropIndex(\"{index}\")",d:1,n:'4.4+: hide it first to test the impact: db.collection.hideIndex("name")'},
+ml:{c:"xquery version \"1.0-ml\";\nimport module namespace admin = \"http://marklogic.com/xdmp/admin\"\n  at \"/MarkLogic/admin.xqy\";\nlet $config := admin:get-configuration()\nlet $db := xdmp:database(\"{db}\")\nlet $idx := admin:database-get-range-element-indexes($config, $db)\n  [*:localname = \"{element}\"]\nreturn admin:save-configuration(\n  admin:database-delete-range-element-index($config, $db, $idx))",d:1,n:'XQuery. Triggers reindexing; queries that need this index will error.'}},
+/* ===== Maintenance ===== */
+{id:'update-stats',cat:'maint',t:'Update statistics',k:'update statistics analyze stats optimizer statistics',
+pg:{c:"ANALYZE VERBOSE {schema}.{table};",n:'Run a database-wide ANALYZE after a major version upgrade; optimizer stats are not carried over (before PostgreSQL 18).'},
+ms:{c:"UPDATE STATISTICS [{schema}].[{table}] WITH FULLSCAN;\n\n-- whole database, sampled:\nEXEC sp_updatestats;"},
+mg:NA('No optimizer statistics. To force plan re-selection see "Clear a bad cached plan".'),
+ml:NA('Not applicable; index-resolved estimates are always current.')},
+
+{id:'vacuum',cat:'maint',t:'Vacuum / clean up a table',k:'vacuum cleanup dead tuples analyze vacuum table',
+pg:{c:"VACUUM (VERBOSE, ANALYZE) {schema}.{table};",n:'Plain VACUUM does not block reads or writes (unlike VACUUM FULL).'},
+ms:NA('No VACUUM; ghost cleanup runs automatically.'),
+mg:NA('WiredTiger reuses space automatically; see compact under "Reclaim space".'),
+ml:NA('Background merges do this; see xdmp:merge under "Reclaim space".')},
+
+{id:'vacuum-progress',cat:'maint',t:'Autovacuum / vacuum progress',k:'autovacuum running vacuum progress what is vacuuming merge progress',
+pg:{c:"SELECT p.pid, p.relid::regclass AS table_name, p.phase,\n       p.heap_blks_scanned, p.heap_blks_total,\n       now() - a.xact_start AS running_for\nFROM pg_stat_progress_vacuum p\nJOIN pg_stat_activity a ON a.pid = p.pid;",v:'PostgreSQL 9.6+'},
+ms:NA('No equivalent.'),
+mg:NA('No equivalent.'),
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:forest-status(xdmp:forest(\"{forest}\"))//*:merges",n:'XQuery. Merges in progress for that forest.'}},
+
+{id:'last-vacuum',cat:'maint',t:'When were stats / vacuum last run',k:'last vacuum last analyze last autovacuum stats date stale statistics',
+pg:{c:"SELECT schemaname, relname,\n       last_vacuum, last_autovacuum,\n       last_analyze, last_autoanalyze\nFROM pg_stat_user_tables\nORDER BY last_autovacuum NULLS FIRST;"},
+ms:{c:"SELECT OBJECT_NAME(s.object_id) AS table_name, s.name AS stat_name,\n       STATS_DATE(s.object_id, s.stats_id) AS last_updated\nFROM sys.stats s\nWHERE OBJECTPROPERTY(s.object_id, 'IsUserTable') = 1\nORDER BY last_updated;"},
+mg:NA('Not applicable.'),
+ml:NA('Not applicable.')},
+
+{id:'xid-wraparound',cat:'maint',tri:1,t:'Transaction ID wraparound risk',k:'wraparound xid age freeze datfrozenxid transaction id',
+pg:{c:"SELECT datname,\n       age(datfrozenxid) AS xid_age,\n       round(100.0 * age(datfrozenxid) / 2147483647, 1) AS pct_to_wraparound\nFROM pg_database\nORDER BY xid_age DESC;",n:'Above ~1.5 billion is urgent. Aurora: CloudWatch MaximumUsedTransactionIDs. Usual blockers: old transactions, inactive replication slots, orphaned prepared transactions.'},
+ms:NA('Not applicable.'),
+mg:NA('Not applicable.'),
+ml:NA('Not applicable.')},
+
+{id:'integrity',cat:'maint',t:'Integrity / corruption check',k:'checkdb corruption integrity check validate amcheck consistency',
+pg:{c:"CREATE EXTENSION IF NOT EXISTS amcheck;\nSELECT bt_index_check('{schema}.{index}'::regclass);",n:'Checks one B-tree index. Aurora storage is checksummed and self-healing, so this mostly catches logical index corruption (e.g. after collation/OS changes).'},
+ms:{c:"DBCC CHECKDB (N'{db}') WITH NO_INFOMSGS, ALL_ERRORMSGS;",n:'I/O heavy; run off-hours or on a restored copy. PHYSICAL_ONLY is quicker.'},
+mg:{c:"db.{collection}.validate({ full: true })",n:'full: true takes an exclusive lock on the collection; without it the check is lighter.'},
+ml:NA('No user-run checker; MarkLogic verifies data during merges and logs corruption to ErrorLog.txt.')},
+
+{id:'error-log',cat:'maint',tri:1,t:'Read the error log',k:'error log errorlog logs server log read log',
+pg:{c:"aws rds describe-db-log-files \\\n  --db-instance-identifier {instance}\n\naws rds download-db-log-file-portion \\\n  --db-instance-identifier {instance} \\\n  --log-file-name {log_file} --output text",l:'shell',n:'Aurora logs can also be published to CloudWatch Logs.'},
+ms:{c:"EXEC sp_readerrorlog 0, 1, N'{search}';",n:'Args: log number (0 = current), log type (1 = SQL Server, 2 = Agent), search string. Undocumented but widely used.'},
+mg:{c:"db.adminCommand({ getLog: \"global\" })",n:'Last 1024 log entries kept in memory.'},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/logs?filename=ErrorLog.txt&host={hostname}&format=text\"",l:'curl'}},
+
+{id:'rotate-log',cat:'maint',t:'Rotate / cycle the error log',k:'rotate log cycle errorlog new log file',
+pg:NA('Aurora rotates logs itself (log_rotation_age / log_rotation_size). Self-managed: SELECT pg_rotate_logfile();'),
+ms:{c:"EXEC sp_cycle_errorlog;"},
+mg:{c:"db.adminCommand({ logRotate: 1 })"},
+ml:NA('Logs rotate daily automatically.')},
+
+{id:'failed-jobs',cat:'maint',t:'Failed scheduled jobs',k:'failed jobs agent jobs job history cron jobs scheduled tasks',
+pg:{c:"SELECT jobid, status, return_message, start_time, end_time\nFROM cron.job_run_details\nWHERE status = 'failed'\nORDER BY start_time DESC\nLIMIT 20;",n:'Needs the pg_cron extension (available on Aurora PostgreSQL 12.6+).'},
+ms:{c:"SELECT j.name, h.run_date, h.run_time, h.message\nFROM msdb.dbo.sysjobhistory h\nJOIN msdb.dbo.sysjobs j ON j.job_id = h.job_id\nWHERE h.run_status = 0\n  AND h.step_id = 0\nORDER BY h.run_date DESC, h.run_time DESC;"},
+mg:NA('No built-in scheduler.'),
+ml:NA('Scheduled task failures go to ErrorLog.txt; no history table.')},
+
+{id:'clear-plan-cache',cat:'maint',danger:1,t:'Clear a bad cached plan',k:'plan cache clear plan freeproccache bad plan parameter sniffing',
+pg:{c:"DISCARD PLANS;",n:'Affects only your own session; PostgreSQL has no shared plan cache.'},
+ms:{c:"-- find the plan_handle first (sys.dm_exec_query_stats), then:\nDBCC FREEPROCCACHE ({plan_handle});",d:1,n:'Never run DBCC FREEPROCCACHE without an argument on production; it clears every plan.'},
+mg:{c:"db.{collection}.getPlanCache().clear()",d:1},
+ml:NA('No plan cache to clear.')},
+
+/* ===== Config & server info ===== */
+{id:'version',cat:'config',t:'Server version',k:'version which version build edition patch level',
+pg:{c:"SELECT version();\nSELECT aurora_version();",n:'aurora_version() exists only on Aurora.'},
+ms:{c:"SELECT SERVERPROPERTY('ProductVersion') AS version,\n       SERVERPROPERTY('ProductLevel') AS level,\n       SERVERPROPERTY('ProductUpdateLevel') AS cu,\n       SERVERPROPERTY('Edition') AS edition;"},
+mg:{c:"db.version()"},
+ml:{c:"xquery version \"1.0-ml\";\nxdmp:version()"}},
+
+{id:'uptime',cat:'config',t:'Server uptime / last restart',k:'uptime restart when restarted start time',
+pg:{c:"SELECT pg_postmaster_start_time(),\n       now() - pg_postmaster_start_time() AS uptime;"},
+ms:{c:"SELECT sqlserver_start_time FROM sys.dm_os_sys_info;"},
+mg:{c:"db.serverStatus().uptime",n:'Seconds.'},
+ml:{c:"xquery version \"1.0-ml\";\nfor $h in xdmp:hosts()\nreturn fn:concat(xdmp:host-name($h), \" : \",\n  xdmp:host-status($h)/*:last-startup)",n:'XQuery.'}},
+
+{id:'whoami',cat:'config',t:'Where am I connected? (host, db, user)',k:'whoami current user current database server name host connected instance',
+pg:{c:"SELECT current_user, current_database(),\n       inet_server_addr(), inet_server_port(),\n       aurora_db_instance_identifier();",n:'aurora_db_instance_identifier() is Aurora only.'},
+ms:{c:"SELECT @@SERVERNAME AS server, DB_NAME() AS db,\n       SUSER_SNAME() AS login, USER_NAME() AS db_user;"},
+mg:{c:"db.getName()\ndb.runCommand({ connectionStatus: 1 })\ndb.hello().me"},
+ml:{c:"xquery version \"1.0-ml\";\n(xdmp:host-name(xdmp:host()),\n xdmp:database-name(xdmp:database()),\n xdmp:get-current-user())"}},
+
+{id:'list-dbs',cat:'config',t:'List databases',k:'list databases show databases all dbs',
+pg:{c:"SELECT datname, pg_get_userbyid(datdba) AS owner,\n       pg_encoding_to_char(encoding) AS encoding\nFROM pg_database\nORDER BY datname;",n:'In psql: \\l'},
+ms:{c:"SELECT name, state_desc, recovery_model_desc,\n       compatibility_level, create_date\nFROM sys.databases\nORDER BY name;"},
+mg:{c:"show dbs"},
+ml:{c:"xquery version \"1.0-ml\";\nfor $d in xdmp:databases()\nreturn xdmp:database-name($d)"}},
+
+{id:'show-param',cat:'config',t:'Show a configuration setting',k:'show parameter config setting value sp_configure getParameter pg_settings',
+pg:{c:"SELECT name, setting, unit, source, context\nFROM pg_settings\nWHERE name ILIKE '%{parameter}%';"},
+ms:{c:"SELECT name, value, value_in_use, description\nFROM sys.configurations\nWHERE name LIKE '%{parameter}%';"},
+mg:{c:"db.adminCommand({ getParameter: 1, {parameter}: 1 })",n:'All parameters: db.adminCommand({ getParameter: \'*\' })'},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/databases/{db}/properties?format=json\"",l:'curl',n:'App servers: /manage/v2/servers/NAME/properties?group-id=Default'}},
+
+{id:'change-param',cat:'config',t:'Change a configuration setting',k:'change parameter set config alter system parameter group setParameter',
+pg:{c:"aws rds modify-db-cluster-parameter-group \\\n  --db-cluster-parameter-group-name {param_group} \\\n  --parameters \"ParameterName={parameter},ParameterValue={value},ApplyMethod=immediate\"",l:'shell',n:'Aurora has no ALTER SYSTEM. Static parameters need ApplyMethod=pending-reboot. Instance-level parameters are in the DB parameter group (modify-db-parameter-group).'},
+ms:{c:"EXEC sp_configure 'show advanced options', 1;\nRECONFIGURE;\nEXEC sp_configure '{parameter}', {value};\nRECONFIGURE;"},
+mg:{c:"db.adminCommand({ setParameter: 1, {parameter}: {value} })",n:'Runtime only; put it in mongod.conf to survive a restart.'},
+ml:{c:"curl --anyauth -u {admin} -X PUT \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"{property}\": {value}}' \\\n  \"http://{host}:8002/manage/v2/databases/{db}/properties\"",l:'curl',n:'Quote string values in the JSON. Some changes restart MarkLogic.'}},
+
+{id:'pending-restart',cat:'config',t:'Settings waiting for a restart',k:'pending restart reboot required changed not applied',
+pg:{c:"SELECT name, setting, pending_restart\nFROM pg_settings\nWHERE pending_restart;",v:'PostgreSQL 9.5+',n:'On Aurora also check aws rds describe-db-instances: DBParameterGroups[].ParameterApplyStatus = pending-reboot.'},
+ms:{c:"SELECT name, value, value_in_use\nFROM sys.configurations\nWHERE value <> value_in_use;"},
+mg:NA('No equivalent.'),
+ml:NA('The Admin UI / API restarts automatically when needed.')},
+
+{id:'extensions',cat:'config',t:'Installed extensions / edition features',k:'extensions installed features modules plugins',
+pg:{c:"SELECT extname, extversion FROM pg_extension;\n\n-- available on this server:\nSELECT name, default_version, installed_version\nFROM pg_available_extensions\nORDER BY name;"},
+ms:{c:"SELECT feature_name FROM sys.dm_db_persisted_sku_features;",n:'Edition-specific features in use in the current database (matters before an edition downgrade).'},
+mg:NA('No extensions.'),
+ml:NA('Not applicable.')},
+
+{id:'memory',cat:'config',t:'Memory usage / settings',k:'memory ram buffer pool shared_buffers max server memory usage',
+pg:{c:"SELECT name, setting, unit\nFROM pg_settings\nWHERE name IN ('shared_buffers', 'work_mem',\n               'maintenance_work_mem', 'effective_cache_size');",n:'shared_buffers is in 8 kB pages. Aurora defaults it to roughly 75% of instance memory; CloudWatch FreeableMemory shows headroom.'},
+ms:{c:"SELECT physical_memory_in_use_kb / 1024 AS mem_in_use_mb,\n       memory_utilization_percentage\nFROM sys.dm_os_process_memory;\n\nSELECT name, value_in_use FROM sys.configurations\nWHERE name IN ('max server memory (MB)', 'min server memory (MB)');"},
+mg:{c:"db.serverStatus().mem",n:'resident / virtual in MB.'},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/hosts/{hostname}?view=status&format=json\"",l:'curl',n:'Host status includes memory usage.'}},
+
+{id:'recovery-model',cat:'config',t:'Recovery model / durability settings',k:'recovery model full simple durability write concern synchronous_commit journaling',
+pg:{c:"SHOW synchronous_commit;",n:'Aurora writes to 6 storage copies; synchronous_commit = off can lose the last commits on a crash.'},
+ms:{c:"SELECT name, recovery_model_desc FROM sys.databases;\n\n-- change:\nALTER DATABASE [{db}] SET RECOVERY FULL;",n:'Switching to SIMPLE breaks the log backup chain.'},
+mg:{c:"db.adminCommand({ getDefaultRWConcern: 1 })",v:'MongoDB 4.4+'},
+ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/databases/{db}/properties?format=json\"",l:'curl',n:'Look at the "journaling" property (strict / fast / off).'}}
+];
+(function(){
+'use strict';
+var ENG=[{id:'pg',name:'Aurora PG',full:'Aurora PostgreSQL'},{id:'ms',name:'SQL Server',full:'SQL Server'},{id:'mg',name:'MongoDB',full:'MongoDB (mongosh)'},{id:'ml',name:'MarkLogic',full:'MarkLogic'}];
+var CATS=[{id:'sessions',name:'Sessions & locks'},{id:'perf',name:'Performance'},{id:'backup',name:'Backup & restore'},{id:'users',name:'Users & permissions'},{id:'storage',name:'Storage & size'},{id:'repl',name:'Replication & HA'},{id:'index',name:'Indexes'},{id:'maint',name:'Maintenance'},{id:'config',name:'Config & server info'}];
+var CATNAME={};CATS.forEach(function(c){CATNAME[c.id]=c.name});
+var LANG={pg:'SQL',ms:'T-SQL',mg:'mongosh',ml:'XQuery'};
+var SYN=[
+ ['kill','terminate','end','disconnect','abort','stop'],
+ ['cancel','abort','interrupt','stop'],
+ ['session','sessions','connection','connections','process','processes','spid','pid','client','clients','backend'],
+ ['blocking','blocked','blocker','block','blocks','lock','locks','locking','wait','waiting','contention','stuck','hung'],
+ ['replication','replica','replicas','standby','secondary','secondaries','ag','availability','mirror','hadr','reader','readers'],
+ ['lag','delay','behind','latency'],
+ ['size','sizes','space','disk','storage','bytes','big','large','largest','biggest','usage'],
+ ['table','tables','collection','collections','relation'],
+ ['long','longest','slow','slowest','expensive','heavy','top'],
+ ['running','active','current','now','executing'],
+ ['query','queries','statement','statements','sql','request','requests','op','ops','operation','operations'],
+ ['backup','backups','dump','snapshot','export'],
+ ['restore','recover','recovery','import'],
+ ['user','users','login','logins','role','roles','account','principal'],
+ ['permission','permissions','privilege','privileges','grant','grants','access','rights'],
+ ['index','indexes','indices','idx'],
+ ['stats','statistics','analyze','counters'],
+ ['config','configuration','setting','settings','parameter','parameters','param','option'],
+ ['version','build','release','edition'],
+ ['failover','switchover','stepdown','promote'],
+ ['primary','writer','master','leader'],
+ ['vacuum','bloat','dead','cleanup'],
+ ['log','logs','errorlog','wal','journal','oplog'],
+ ['count','counts','rows','number','how many'],
+ ['transaction','transactions','txn','xact','tran'],
+ ['memory','ram','cache','buffer'],
+ ['free','left','available','remaining','full'],
+ ['drop','delete','remove'],
+ ['create','add','new','make'],
+ ['password','pwd','passwd'],
+ ['plan','explain','showplan'],
+ ['health','status','state','check']
+];
+var SYNMAP={};SYN.forEach(function(g){g.forEach(function(w){(SYNMAP[w]=SYNMAP[w]||[]);g.forEach(function(x){if(SYNMAP[w].indexOf(x)<0)SYNMAP[w].push(x)})})});
+var LS='dbcs.v1';
+var st={stars:[],custom:[],notes:{},vals:{},theme:'auto',eng:['pg','ms','mg','ml']};
+var ui={q:'',cat:'all',tab:{}};
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function load(){try{var d=JSON.parse(localStorage.getItem(LS)||'null');if(d&&typeof d==='object'){for(var k in st)if(d[k]!==undefined)st[k]=d[k]}}catch(e){}
+ if(!Array.isArray(st.eng)||!st.eng.length)st.eng=['pg','ms','mg','ml']}
+function save(){try{localStorage.setItem(LS,JSON.stringify(st))}catch(e){toast('Could not save (storage full or blocked)')}}
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show')},1800)}
+/* ---------- theme ---------- */
+function applyTheme(){var t=st.theme;if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);
+ $('themeBtn').textContent=st.theme==='auto'?'🌓':(st.theme==='dark'?'🌙':'☀️');$('themeBtn').title='Theme: '+st.theme}
+/* ---------- data ---------- */
+function allTasks(){var c=st.custom.map(function(s){var o={id:s.id,cat:s.cat,t:s.t,k:s.k||'',custom:1,danger:s.d?1:0};o[s.eng]={c:s.c,n:s.n,d:s.d?1:0};return o});return TASKS.concat(c)}
+function words(s){return String(s).toLowerCase().replace(/[^a-z0-9_$]+/g,' ').split(' ').filter(Boolean)}
+var IDX={};
+function indexTask(t){if(IDX[t.id]&&IDX[t.id].src===t)return IDX[t.id];var main=words(t.t+' '+t.k+' '+(CATNAME[t.cat]||''));var code='';ENG.forEach(function(e){var x=t[e.id];if(x)code+=' '+(x.c||x.na||'')+' '+(x.n||'')});
+ return IDX[t.id]={src:t,main:main,code:code.toLowerCase(),title:t.t.toLowerCase()}}
+function lev1(a,b){if(Math.abs(a.length-b.length)>1)return false;var i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}if(++d>1)return false;
+ if(a.length>b.length)i++;else if(b.length>a.length)j++;else{ if(a[i+1]===b[j]&&a[i]===b[j+1]){i+=2;j+=2;continue} i++;j++}}return d+(a.length-i)+(b.length-j)<=1}
+function tokScore(tok,ix,deep){if(!SYNMAP[tok]&&tok.length>=5&&!deep){for(var sk in SYNMAP){if(sk.length>=5&&lev1(tok,sk)){tok=sk;break}}}var alts=SYNMAP[tok]||[tok];var best=0;
+ for(var a=0;a<alts.length;a++){var w=alts[a],syn=w!==tok,s=0;
+  for(var i=0;i<ix.main.length;i++){var m=ix.main[i];if(m===w)s=Math.max(s,3);else if(w.length>=3&&m.indexOf(w)===0)s=Math.max(s,2.2);else if(w.length>=4&&lev1(w,m))s=Math.max(s,1.6)}
+  if(!s&&w.length>=3&&ix.code.indexOf(w)>=0)s=1;
+  if(syn)s*=0.8;best=Math.max(best,s)}
+ if(!best&&!deep&&tok.length>=5){for(var k in SYNMAP){if(lev1(tok,k)){var r=tokScore(k,ix,1);if(r)return r*0.7}}}
+ return best}
+function score(t,q){var ix=indexTask(t);var toks=words(q);if(!toks.length)return 1;var tot=0;
+ for(var i=0;i<toks.length;i++){var s=tokScore(toks[i],ix);if(!s)return 0;tot+=s}
+ if(ix.title.indexOf(q.toLowerCase().trim())>=0)tot+=4;return tot}
+function hasEng(t){return st.eng.some(function(e){return t[e]&&!t[e].na})}
+function visible(){var q=ui.q.trim(),cat=ui.cat,stars=st.stars;var res=[];
+ allTasks().forEach(function(t,i){if(cat==='tri'&&!t.tri)return;if(cat==='star'&&stars.indexOf(t.id)<0)return;if(cat==='mine'&&!t.custom)return;
+  if(CATNAME[cat]&&t.cat!==cat)return;if(!hasEng(t))return;var s=score(t,q);if(!s)return;res.push({t:t,s:s,i:i,star:stars.indexOf(t.id)>=0})});
+ res.sort(function(a,b){if(a.star!==b.star)return a.star?-1:1;if(q&&b.s!==a.s)return b.s-a.s;var da=a.t.danger?1:0,db=b.t.danger?1:0;if(cat!=='tri'&&da!==db)return da-db;return a.i-b.i});
+ return res.map(function(r){return r.t})}
+/* ---------- render ---------- */
+var PH=/\{([a-z][a-z0-9_]*)\}/g;
+function phNames(code){var m,o=[];PH.lastIndex=0;while((m=PH.exec(code)))if(o.indexOf(m[1])<0)o.push(m[1]);return o}
+function fill(code){return code.replace(PH,function(all,n){var v=st.vals[n];return v?v:all})}
+function codeHtml(code){var out='',last=0,m;PH.lastIndex=0;while((m=PH.exec(code))){out+=esc(code.slice(last,m.index));var v=st.vals[m[1]];
+ out+='<span class="p'+(v?' f':'')+'" data-ph="'+m[1]+'">'+esc(v||m[0])+'</span>';last=PH.lastIndex}return out+esc(code.slice(last))}
+function chips(){var e=$('engChips');e.innerHTML='<button class="chip" data-eng="all" aria-pressed="'+(st.eng.length===4)+'">All engines</button>'+ENG.map(function(x){return '<button class="chip e" style="--ec:var(--'+x.id+')" data-eng="'+x.id+'" aria-pressed="'+(st.eng.indexOf(x.id)>=0&&st.eng.length<4)+'">'+x.name+'</button>'}).join('');
+ var c=$('catChips');var list=[{id:'all',name:'All'},{id:'tri',name:'🚨 3 AM triage'},{id:'star',name:'★ Starred'}].concat(CATS).concat([{id:'mine',name:'✍️ My snippets'}]);
+ c.innerHTML=list.map(function(x){return '<button class="chip" data-cat="'+x.id+'" aria-pressed="'+(ui.cat===x.id)+'">'+esc(x.name)+'</button>'}).join('')}
+function panel(t,e,on){var x=t[e.id];var h='<div class="pn'+(on?' on':'')+'" style="--ec:var(--'+e.id+')" data-e="'+e.id+'"><div class="eh">'+e.full+'</div>';
+ if(!x){return h+'<div class="na">—</div></div>'}
+ if(x.na){return h+'<div class="na"><b>No direct equivalent.</b> '+esc(x.na)+'</div></div>'}
+ var b='<span class="b">'+(x.l==='shell'?'shell':x.l==='curl'?'curl · REST :8002':LANG[e.id])+'</span>';if(x.d)b+='<span class="b dz">⚠ Destructive</span>';if(x.v)b+='<span class="b v">'+esc(x.v)+'</span>';
+ h+='<div class="badges">'+b+'</div>';var ph=phNames(x.c);
+ if(ph.length)h+='<div class="phs">'+ph.map(function(n){return '<label>{'+n+'}<input data-fill="'+n+'" value="'+esc(st.vals[n]||'')+'" placeholder="'+n+'" autocomplete="off" autocapitalize="off" spellcheck="false"></label>'}).join('')+'</div>';
+ h+='<pre>'+codeHtml(x.c)+'</pre>';if(x.n)h+='<p class="note">💡 '+esc(x.n)+'</p>';
+ h+='<div class="acts"><button class="btn pri" data-copy="'+esc(t.id)+'|'+e.id+'">'+(x.d?'⚠ Copy':'Copy')+'</button>'+(t.custom?'<button class="btn dz" data-del="'+esc(t.id)+'">Delete snippet</button>':'')+'</div>';
+ return h+'</div>'}
+function card(t){var engs=ENG.filter(function(e){return st.eng.indexOf(e.id)>=0&&(t[e.id]||!t.custom)});if(t.custom)engs=engs.filter(function(e){return t[e.id]});
+ var act=ui.tab[t.id];if(!engs.some(function(e){return e.id===act})){var f=engs.filter(function(e){return t[e.id]&&!t[e.id].na})[0]||engs[0];act=f&&f.id}
+ var star=st.stars.indexOf(t.id)>=0;var note=st.notes[t.id];
+ var h='<article class="card" data-id="'+esc(t.id)+'"><div class="ch"><div style="flex:1;min-width:0"><h3>'+esc(t.t)+'</h3><div class="sub"><span class="tag">'+esc(CATNAME[t.cat]||t.cat)+'</span>'+(t.tri?'<span class="tag cu">3 AM</span>':'')+(t.danger?'<span class="tag dz">⚠ Destructive</span>':'')+(t.custom?'<span class="tag cu">Mine</span>':'')+'</div></div>'+
+ '<button class="star" data-star="'+esc(t.id)+'" aria-pressed="'+star+'" aria-label="Star">'+(star?'★':'☆')+'</button></div>';
+ if(engs.length>1)h+='<div class="tabs" role="tablist">'+engs.map(function(e){var x=t[e.id];return '<button class="tab'+(!x||x.na?' tna':'')+'" role="tab" style="--ec:var(--'+e.id+')" data-tab="'+e.id+'" aria-selected="'+(e.id===act)+'">'+e.name+'</button>'}).join('')+'</div>';
+ h+='<div class="panels" style="--n:'+engs.length+'">'+engs.map(function(e){return panel(t,e,e.id===act)}).join('')+'</div>';
+ h+='<div class="unote">'+(note?'<div class="saved">📝 '+esc(note)+'</div>':'')+'<button class="btn" data-note="'+esc(t.id)+'">'+(note?'Edit note':'📝 Add note')+'</button></div>';
+ return h+'</article>'}
+var TRI='<div class="banner"><b>🚨 3 AM triage, in order:</b><ol><li>Who is connected and what is running (sessions, connection count)</li><li>Blocking and the head blocker, idle-in-transaction sessions</li><li>Long-running queries and waits</li><li>Replication / cluster health and lag</li><li>Disk, log space, XID age, error log</li></ol>Look first; kill only after you know what the session is doing.</div>';
+function render(){chips();var v=visible();$('banner').innerHTML=ui.cat==='tri'&&!ui.q?TRI:'';
+ $('meta').textContent=v.length+' task'+(v.length===1?'':'s')+(ui.q?' matching "'+ui.q.trim()+'"':'')+(st.eng.length<4?' · '+st.eng.map(function(e){return ENG.filter(function(x){return x.id===e})[0].name}).join(', '):'');
+ $('list').innerHTML=v.length?v.map(card).join(''):'<div class="empty">No matching tasks. Try other words (e.g. "lock", "size", "lag"), or add your own snippet from the ⋯ menu.</div>';
+ $('clr').style.display=ui.q?'block':'none'}
+/* ---------- copy ---------- */
+function copyText(s){if(navigator.clipboard&&window.isSecureContext){return navigator.clipboard.writeText(s).catch(function(){return legacy(s)})}return Promise.resolve(legacy(s))}
+function legacy(s){var ta=document.createElement('textarea');ta.value=s;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);if(!ok)throw new Error('copy failed');return ok}
+function findTask(id){return allTasks().filter(function(t){return t.id===id})[0]}
+/* ---------- events ---------- */
+document.addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;var d=b.dataset;
+ if(d.eng){if(d.eng==='all')st.eng=['pg','ms','mg','ml'];else if(st.eng.length===4)st.eng=[d.eng];else{var i=st.eng.indexOf(d.eng);if(i>=0){st.eng.splice(i,1);if(!st.eng.length)st.eng=['pg','ms','mg','ml']}else st.eng.push(d.eng)}
+  st.eng.sort(function(a,b){return 'pgmsmgml'.indexOf(a)-'pgmsmgml'.indexOf(b)});save();render();return}
+ if(d.cat){ui.cat=d.cat;render();window.scrollTo(0,0);return}
+ if(d.tab){var c=b.closest('.card');ui.tab[c.dataset.id]=d.tab;c.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',x===b)});c.querySelectorAll('.pn').forEach(function(p){p.classList.toggle('on',p.dataset.e===d.tab)});return}
+ if(d.star){var k=st.stars.indexOf(d.star);if(k>=0)st.stars.splice(k,1);else st.stars.push(d.star);save();toast(k>=0?'Removed from starred':'Starred, it now sorts first');render();return}
+ if(d.copy){var p=d.copy.split('|'),t=findTask(p[0]);if(!t||!t[p[1]])return;var txt=fill(t[p[1]].c);copyText(txt).then(function(){b.classList.add('ok');b.textContent='Copied ✓';var left=phNames(txt).length;toast(left?'Copied · '+left+' placeholder(s) still empty':'Copied to clipboard');setTimeout(function(){b.classList.remove('ok');b.textContent=t[p[1]].d?'⚠ Copy':'Copy'},1400)}).catch(function(){toast('Copy blocked; long-press the code to copy')});return}
+ if(d.note){var cur=st.notes[d.note]||'';var unote=b.parentNode;unote.innerHTML='<textarea placeholder="Your note: env specifics, ticket links…">'+esc(cur)+'</textarea><div class="acts"><button class="btn pri" data-nsave="'+esc(d.note)+'">Save note</button><button class="btn" data-ncancel="1">Cancel</button></div>';unote.querySelector('textarea').focus();return}
+ if(d.nsave){var v=b.closest('.unote').querySelector('textarea').value.trim();if(v)st.notes[d.nsave]=v;else delete st.notes[d.nsave];save();render();toast('Note saved');return}
+ if(d.ncancel){render();return}
+ if(d.del){if(!confirm('Delete this snippet?'))return;st.custom=st.custom.filter(function(s){return s.id!==d.del});var si=st.stars.indexOf(d.del);if(si>=0)st.stars.splice(si,1);delete st.notes[d.del];save();render();toast('Snippet deleted');return}
+});
+document.addEventListener('input',function(ev){var n=ev.target.dataset&&ev.target.dataset.fill;if(!n)return;var v=ev.target.value;if(v)st.vals[n]=v;else delete st.vals[n];save();
+ document.querySelectorAll('span.p[data-ph="'+n+'"]').forEach(function(s){s.textContent=v||'{'+n+'}';s.classList.toggle('f',!!v)});
+ document.querySelectorAll('input[data-fill="'+n+'"]').forEach(function(i){if(i!==ev.target)i.value=v})});
+var qt;$('q').addEventListener('input',function(){clearTimeout(qt);var v=this.value;qt=setTimeout(function(){ui.q=v;render()},120)});
+$('clr').onclick=function(){$('q').value='';ui.q='';render();$('q').focus()};
+$('themeBtn').onclick=function(){st.theme=st.theme==='auto'?'dark':st.theme==='dark'?'light':'auto';save();applyTheme();toast('Theme: '+st.theme)};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+function sheet(id,open){$(id).classList.toggle('open',open)}
+$('menuBtn').onclick=function(){sheet('menuSheet',true)};
+$('mClose').onclick=function(){sheet('menuSheet',false)};
+document.querySelectorAll('.sheet').forEach(function(s){s.addEventListener('click',function(e){if(e.target===s)s.classList.remove('open')})});
+$('aE').innerHTML=ENG.map(function(e){return '<option value="'+e.id+'">'+e.full+'</option>'}).join('');
+$('aC').innerHTML=CATS.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>'}).join('');
+$('mAdd').onclick=function(){sheet('menuSheet',false);['aT','aCode','aN','aK'].forEach(function(i){$(i).value=''});$('aD').checked=false;if(st.eng.length<4)$('aE').value=st.eng[0];sheet('addSheet',true);$('aT').focus()};
+$('aCancel').onclick=function(){sheet('addSheet',false)};
+$('aSave').onclick=function(){var t=$('aT').value.trim(),c=$('aCode').value.replace(/\s+$/,'');if(!t||!c){toast('Title and command are required');return}
+ st.custom.push({id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:t,eng:$('aE').value,cat:$('aC').value,c:c,n:$('aN').value.trim(),k:$('aK').value.trim(),d:$('aD').checked});save();sheet('addSheet',false);ui.cat='mine';ui.q='';$('q').value='';render();toast('Snippet saved')};
+$('mExport').onclick=function(){var data={app:'db-cheatsheet',version:1,exported:new Date().toISOString(),stars:st.stars,custom:st.custom,notes:st.notes,vals:st.vals};
+ var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='db-cheatsheet-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);toast('Backup downloaded')};
+$('mImport').onclick=function(){$('fileIn').value='';$('fileIn').click()};
+$('fileIn').onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{importData(JSON.parse(r.result));sheet('menuSheet',false)}catch(e){toast('Not a valid backup file')}};r.readAsText(f)};
+function importData(d){if(!d||d.app!=='db-cheatsheet')throw new Error('bad');var ids={};st.custom.forEach(function(s){ids[s.id]=1});
+ (d.custom||[]).forEach(function(s){if(s&&s.id&&s.t&&s.c&&!ids[s.id]&&ENG.some(function(e){return e.id===s.eng})){st.custom.push({id:String(s.id),t:String(s.t),eng:s.eng,cat:CATNAME[s.cat]?s.cat:'maint',c:String(s.c),n:String(s.n||''),k:String(s.k||''),d:!!s.d});ids[s.id]=1}});
+ (d.stars||[]).forEach(function(s){if(typeof s==='string'&&st.stars.indexOf(s)<0)st.stars.push(s)});
+ if(d.notes&&typeof d.notes==='object')for(var k in d.notes)if(typeof d.notes[k]==='string')st.notes[k]=d.notes[k];
+ if(d.vals&&typeof d.vals==='object')for(var v in d.vals)if(typeof d.vals[v]==='string')st.vals[v]=d.vals[v];
+ save();render();toast('Backup imported')}
+window.__dbcsImport=importData;
+$('mClearVals').onclick=function(){st.vals={};save();render();sheet('menuSheet',false);toast('Placeholder values cleared')};
+/* ---------- persistence + manifest ---------- */
+function persist(){var el=$('storeInfo');if(navigator.storage&&navigator.storage.persist){navigator.storage.persisted().then(function(p){return p||navigator.storage.persist()}).then(function(p){el.textContent=p?'🔒 Storage is persistent on this device.':'Storage may be cleared by the browser; export a backup now and then. Adding to the home screen helps.'}).catch(function(){})}}
+function makeIcon(size){try{var c=document.createElement('canvas');c.width=c.height=size;var x=c.getContext('2d');x.fillStyle='#2f5bd3';x.fillRect(0,0,size,size);x.fillStyle='#fff';x.font='bold '+Math.round(size*.42)+'px ui-monospace,monospace';x.textAlign='center';x.textBaseline='middle';x.fillText('>_',size/2,size*.52);return c.toDataURL('image/png')}catch(e){return ''}}
+try{$('appleIcon').href=makeIcon(180);var base=location.href.split('#')[0].split('?')[0];
+ var man={name:'DBA Cheat Sheet',short_name:'DBA Cheats',description:'Offline DBA commands for Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic',start_url:base,scope:base.replace(/[^\/]*$/,''),display:'standalone',background_color:'#f3f5f9',theme_color:'#2f5bd3',icons:[{src:makeIcon(192),sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:makeIcon(512),sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+ $('manifestLink').href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(man))}catch(e){}
+load();applyTheme();render();persist();
+})();
+</script>
+</body>
+</html>

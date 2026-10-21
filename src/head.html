@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DBA Cheat Sheet · Aurora PG · SQL Server · MongoDB · MarkLogic</title>
+<meta name="description" content="Offline DBA cheat sheet: the same task across Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic.">
+<meta name="theme-color" content="#2f5bd3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1320" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DBA Cheats">
+<meta name="application-name" content="DBA Cheats">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232f5bd3'/%3E%3Ctext x='50' y='68' font-size='46' text-anchor='middle' fill='white' font-family='monospace' font-weight='700'%3E%3E_%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<link rel="manifest" id="manifestLink" href="">
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--text:#141a26;--muted:#5f6b80;--line:#e1e6ef;--brand:#2f5bd3;--brand-soft:#e6edfd;
+--code:#f5f7fb;--codetext:#1b2333;--danger:#c93434;--danger-soft:#fde9e9;--warn:#9a6a00;--warn-soft:#fff4d6;--ph:#fff1b8;--phtext:#5a4300;
+--shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(20,30,60,.07);--r:16px;
+--pg:#336791;--ms:#a91d22;--mg:#13aa52;--ml:#c2410c;
+--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+:root[data-theme=dark]{--bg:#0b0f18;--card:#141a27;--text:#e6ebf5;--muted:#95a1b8;--line:#232c3d;--brand:#7aa2ff;--brand-soft:#1a2645;
+--code:#0e1320;--codetext:#d7e0f0;--danger:#ff7676;--danger-soft:#3b1c1f;--warn:#f3c55a;--warn-soft:#33290f;--ph:#4a3d0c;--phtext:#ffe69a;
+--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b;--mg:#4cd08a;--ml:#ff9a5c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;padding-bottom:calc(var(--sab) + 40px);overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px}
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(var(--sat) + 8px) 0 8px;border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:8px}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center;font:800 15px ui-monospace,monospace;flex:none}
+:root[data-theme=dark] .logo{color:#0b0f18}
+.title{font-weight:750;font-size:1.05rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title small{display:block;font-weight:500;color:var(--muted);font-size:.75rem}
+.ib{min-width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:1.15rem;flex:none}
+.search{position:relative;margin-top:8px}
+.search input{width:100%;height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);padding:0 44px 0 42px;font-size:16px;outline:none}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.search input:focus{border-color:var(--brand)}
+.search .mag{position:absolute;left:14px;top:13px;opacity:.55;pointer-events:none}
+.search .clr{position:absolute;right:2px;top:2px;width:44px;height:44px;border:0;background:none;font-size:1.1rem;color:var(--muted);display:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:38px;padding:0 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:.88rem;font-weight:600;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme=dark] .chip[aria-pressed=true]{color:#0b0f18}
+.chip.e[aria-pressed=true]{background:var(--ec);border-color:var(--ec);color:#fff}
+.chip.e{--ec:var(--brand)}
+.meta{color:var(--muted);font-size:.85rem;margin:10px 2px}
+.banner{background:var(--warn-soft);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin:10px 0;font-size:.9rem}
+.banner ol{margin:6px 0 0;padding-left:20px}
+.list{display:grid;gap:12px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;min-width:0}
+.ch{display:flex;align-items:flex-start;gap:8px;padding:12px 8px 8px 14px}
+.ch h3{margin:0;font-size:1rem;line-height:1.3;flex:1;min-width:0;overflow-wrap:anywhere}
+.ch .sub{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.tag{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand)}
+.tag.dz{background:var(--danger-soft);color:var(--danger)}
+.tag.cu{background:var(--warn-soft);color:var(--warn)}
+.star{width:44px;height:44px;border:0;background:none;font-size:1.35rem;color:var(--muted);flex:none;border-radius:12px}
+.star[aria-pressed=true]{color:#f0b400}
+.tabs{display:flex;gap:4px;padding:0 10px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;min-height:44px;padding:0 6px;border:0;background:none;font-weight:700;font-size:.8rem;color:var(--muted);border-bottom:3px solid transparent}
+.tab[aria-selected=true]{color:var(--ec);border-bottom-color:var(--ec)}
+.tab.tna{opacity:.5}
+.panels{display:block}
+.pn{display:none;padding:12px 14px 14px;min-width:0}
+.pn.on{display:block}
+.pn .eh{display:none;font-weight:800;font-size:.85rem;color:var(--ec);margin-bottom:6px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.b{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--code);border:1px solid var(--line);color:var(--muted)}
+.b.dz{background:var(--danger-soft);color:var(--danger);border-color:transparent}
+.b.v{color:var(--brand)}
+pre{margin:0;background:var(--code);color:var(--codetext);border:1px solid var(--line);border-radius:12px;padding:12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:60vh;overflow:auto;tab-size:2}
+pre .p{background:var(--ph);color:var(--phtext);border-radius:4px;padding:0 2px}
+pre .p.f{background:transparent;color:var(--brand);font-weight:700;padding:0}
+.note{font-size:.86rem;color:var(--muted);margin:8px 0 0;overflow-wrap:anywhere}
+.na{overflow-wrap:anywhere;font-size:.9rem;color:var(--muted);background:var(--code);border:1px dashed var(--line);border-radius:12px;padding:12px}
+.na b{color:var(--text)}
+.phs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:0 0 10px}
+.phs label{display:flex;flex-direction:column;font-size:.72rem;font-weight:700;color:var(--muted);min-width:0}
+.phs input{height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);padding:0 10px;font:14px ui-monospace,monospace;min-width:0;width:100%;margin-top:3px}
+.acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:.9rem}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme=dark] .btn.pri{color:#0b0f18}
+.btn.dz{color:var(--danger)}
+.btn.ok{background:#15a46b;border-color:#15a46b;color:#fff}
+.unote{padding:0 14px 12px}
+.unote textarea{width:100%;min-height:70px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);padding:10px;font-size:.9rem;resize:vertical}
+.unote .saved{white-space:pre-wrap;font-size:.86rem;background:var(--warn-soft);border-radius:10px;padding:8px 10px;margin-bottom:8px;overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+@media (min-width:900px){
+ .tabs{display:none}
+ .panels{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));}
+ .pn{display:block;border-left:1px solid var(--line)}
+ .pn:first-child{border-left:0}
+ .pn .eh{display:block}
+ pre{font-size:12px}
+}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+.sheet.open{display:flex}
+.sheet .box{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(var(--sab) + 18px)}
+@media (min-width:600px){.sheet{align-items:center}.sheet .box{border-radius:20px}}
+.box h2{margin:0 0 12px;font-size:1.15rem}
+.menu button{display:block;width:100%;text-align:left;min-height:50px;border:0;border-bottom:1px solid var(--line);background:none;font-size:1rem;padding:0 6px}
+.f{display:block;margin-bottom:12px;font-size:.85rem;font-weight:700;color:var(--muted)}
+.f input,.f select,.f textarea{display:block;width:100%;margin-top:4px;min-height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);padding:8px 12px;font-size:16px;font-weight:400;color:var(--text)}
+.f textarea{min-height:120px;font-family:ui-monospace,monospace;font-size:14px}
+.chk{display:flex;align-items:center;gap:10px;font-weight:600;margin-bottom:12px;min-height:44px}
+.chk input{width:22px;height:22px}
+.toast{position:fixed;left:50%;bottom:calc(var(--sab) + 24px);transform:translateX(-50%) translateY(20px);background:#141a26;color:#fff;padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;transition:.2s;z-index:60;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.small{font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+ <div class="bar">
+  <div class="logo">&gt;_</div>
+  <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic</small></div>
+  <button class="ib" id="themeBtn" aria-label="Toggle dark mode" title="Theme">🌓</button>
+  <button class="ib" id="menuBtn" aria-label="Menu" title="Menu">⋯</button>
+ </div>
+ <div class="search"><span class="mag">🔍</span>
+  <input id="q" type="search" placeholder="Search a task: kill session, blocking, table size…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+  <button class="clr" id="clr" aria-label="Clear search">✕</button></div>
+ <div class="chips" id="engChips" role="group" aria-label="Engines"></div>
+ <div class="chips" id="catChips" role="group" aria-label="Categories"></div>
+</div></header>
+<main class="wrap">
+ <div id="banner"></div>
+ <div class="meta" id="meta"></div>
+ <div class="list" id="list"></div>
+</main>
+<div class="sheet" id="menuSheet"><div class="box menu">
+ <h2>Menu</h2>
+ <button id="mAdd">➕ Add my own snippet</button>
+ <button id="mExport">⬇️ Export backup (JSON)</button>
+ <button id="mImport">⬆️ Import backup</button>
+ <button id="mClearVals">🧹 Clear filled-in placeholder values</button>
+ <button id="mClose">Close</button>
+ <p class="small" id="storeInfo"></p>
+ <p class="small">Commands follow the official docs for each engine. Always read the note and test on non-production first. Everything you add is saved only in this browser.</p>
+ <input type="file" id="fileIn" accept="application/json,.json" hidden>
+</div></div>
+<div class="sheet" id="addSheet"><div class="box">
+ <h2 id="addTitle">Add my snippet</h2>
+ <label class="f">Task title<input id="aT" maxlength="120" placeholder="e.g. Check our nightly ETL lag"></label>
+ <label class="f">Engine<select id="aE"></select></label>
+ <label class="f">Category<select id="aC"></select></label>
+ <label class="f">Command (use {placeholders} like {table})<textarea id="aCode" spellcheck="false" autocapitalize="off"></textarea></label>
+ <label class="f">Note (optional)<input id="aN" maxlength="300"></label>
+ <label class="f">Extra search keywords (optional)<input id="aK" maxlength="200"></label>
+ <label class="chk"><input type="checkbox" id="aD"> Destructive (show warning badge)</label>
+ <div class="acts"><button class="btn pri" id="aSave">Save</button><button class="btn" id="aCancel">Cancel</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<script>
