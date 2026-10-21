@@ -683,6 +683,96 @@ ms:{c:"SELECT name, recovery_model_desc FROM sys.databases;\n\n-- change:\nALTER
 mg:{c:"db.adminCommand({ getDefaultRWConcern: 1 })",v:'MongoDB 4.4+'},
 ml:{c:"curl --anyauth -u {admin} \\\n  \"http://{host}:8002/manage/v2/databases/{db}/properties?format=json\"",l:'curl',n:'Look at the "journaling" property (strict / fast / off).'}}
 ];
+/* ===== sp_WhoIsActive (SQL Server, Adam Machanic) + extra PostgreSQL tasks ===== */
+(function(){
+var K='whoisactive sp_whoisactive who is active whoisactive adam machanic sp_who2 activity monitor ';
+var SEE=function(t){return NA('sp_WhoIsActive is SQL Server only. Closest here: "'+t+'".')};
+function W(id,cat,t,k,c,n,o){o=o||{};var x={id:'wia-'+id,cat:cat,t:'sp_WhoIsActive: '+t,k:K+k,
+ ms:{c:c,n:n,v:o.v||'sp_WhoIsActive v11+ (free, third-party)',d:o.d?1:0},
+ pg:o.pg?SEE(o.pg):NA('sp_WhoIsActive is SQL Server only.'),mg:o.mg?SEE(o.mg):NA('sp_WhoIsActive is SQL Server only.'),ml:o.ml?SEE(o.ml):NA('sp_WhoIsActive is SQL Server only.')};
+ if(o.tri)x.tri=1;if(o.danger)x.danger=1;return x}
+TASKS.push(
+W('basic','sessions','basic call (what is running now)','active queries running requests current activity sessions',
+"EXEC sp_WhoIsActive;",
+'Shows active requests plus sleeping sessions with an open transaction (default @show_sleeping_spids = 1). Needs VIEW SERVER STATE. Usually installed in master or a DBA database; call it as dbname.dbo.sp_WhoIsActive if not in master.',
+{tri:1,pg:'List active sessions / running requests',mg:'List active sessions / running requests',ml:'List active sessions / running requests'}),
+W('install','config','install / where to get it','install download setup deploy get sp_whoisactive',
+"-- 1. Download sp_WhoIsActive.sql from:\n--    https://github.com/amachanic/sp_whoisactive/releases\n--    (docs: http://whoisactive.com/docs/)\n-- 2. Run the script in the database you want it in, e.g.:\nUSE master;\nGO\n-- (paste / run sp_WhoIsActive.sql here)\n\n-- 3. Let a non-sysadmin monitoring login use it:\nGRANT EXECUTE ON dbo.sp_WhoIsActive TO [{login}];\nGRANT VIEW SERVER STATE TO [{login}];",
+'Free third-party procedure by Adam Machanic (GPLv3), NOT built into SQL Server. Installing in master lets you call it from any database. On SQL Server 2022+ VIEW SERVER PERFORMANCE STATE is the narrower permission.'),
+W('help','config','built-in help (all parameters and columns)','help parameters documentation usage',
+"EXEC sp_WhoIsActive @help = 1;",
+'Returns every parameter with its default and description, and every output column. The quickest way to check what your installed version supports.'),
+W('block-leaders','sessions','find block leaders (root blockers first)','blocking blocker head blocker lead blocker blocked chain root blocker locks',
+"EXEC sp_WhoIsActive\n    @find_block_leaders = 1,\n    @sort_order = '[blocked_session_count] DESC';",
+'Adds blocked_session_count (all sessions blocked under this one, recursively) and sorts head blockers to the top. Also enables @get_task_info level 1 if it was 0.',
+{tri:1,pg:'Find the head (root) blocker',mg:'Find blocking / blocked sessions',ml:'Find blocking / blocked sessions'}),
+W('plans','perf','include query plans','execution plan query plan showplan xml plan',
+"-- plan for the current statement only:\nEXEC sp_WhoIsActive @get_plans = 1;\n\n-- whole batch / module plan:\nEXEC sp_WhoIsActive @get_plans = 2;",
+'Overhead: fetching and converting plan XML is expensive on busy servers with many requests and can be slow; avoid it in frequent scheduled collection unless you need it.',
+{pg:'Show the execution plan',mg:'Show the execution plan',ml:'Show the execution plan'}),
+W('full-text','perf','full batch text and outer command','full text batch outer command calling proc input buffer stored procedure name',
+"EXEC sp_WhoIsActive\n    @get_full_inner_text = 1,\n    @get_outer_command = 1;",
+'By default sql_text is just the running statement. @get_full_inner_text = 1 returns the whole batch or module; @get_outer_command = 1 adds sql_command, the outer batch or proc call that the client sent (e.g. EXEC dbo.MyProc @x = 1).'),
+W('locks','sessions','show locks held per session','locks held lock detail lock xml lock mode',
+"EXEC sp_WhoIsActive @get_locks = 1;",
+'Adds a locks XML column summarising locks per session (from sys.dm_tran_locks). Overhead: can be expensive when sessions hold many locks; use it on demand, not in frequent logging.',
+{pg:'Show lock details',mg:'Show lock details',ml:'Show lock details'}),
+W('task-info','perf','full task info and wait details','waits wait stats wait info parallelism cxpacket tasks threads wait types',
+"EXEC sp_WhoIsActive @get_task_info = 2;",
+'Level 2 pulls all task-based metrics: number of tasks, every wait type in wait_info, physical I/O, context switches. Default level 1 shows only the top non-CXPACKET wait. With a lock wait detected at level 2 and @get_additional_info = 1, a block_info node is added. For server-wide cumulative waits see "Wait statistics".',
+{tri:1,pg:'Wait statistics (what is the server waiting on)',mg:'Wait statistics (what is the server waiting on)'}),
+W('tran-info','sessions','transaction info (log usage, open tran)','transaction log used open transaction tran_log_writes tran_start_time',
+"EXEC sp_WhoIsActive @get_transaction_info = 1;",
+'Adds tran_start_time, tran_log_writes (log used per database) and open_tran_count. Good for "who is filling the transaction log".',
+{pg:'Oldest open transaction',mg:'Oldest open transaction'}),
+W('additional','sessions','additional info (SET options, job name, isolation level)','additional info set options isolation level agent job name lock timeout',
+"EXEC sp_WhoIsActive @get_additional_info = 1;",
+'Adds an additional_info XML column: text size, language, date format, ANSI SET options, transaction isolation level, lock timeout, deadlock priority, row count and, for SQL Agent sessions, the job and step name.'),
+W('avg-time','perf','compare with average runtime','average time avg elapsed slower than usual regression dd hh mm ss avg',
+"EXEC sp_WhoIsActive @get_avg_time = 1;",
+'Adds [dd hh:mm:ss.mss (avg)]: the average duration of the same query from plan cache stats, so you can tell whether a request is unusually slow right now.'),
+W('sleeping','sessions','include sleeping sessions and your own session','sleeping sessions idle connections show own spid all sessions sp_who2',
+"-- all sleeping sessions, not only those with an open transaction:\nEXEC sp_WhoIsActive @show_sleeping_spids = 2;\n\n-- also include the session running the proc:\nEXEC sp_WhoIsActive @show_own_spid = 1;",
+'@show_sleeping_spids: 0 = none, 1 = only sleeping sessions with an open transaction (default), 2 = all.',
+{pg:'Sessions idle in an open transaction',mg:'Sessions idle in an open transaction'}),
+W('system','sessions','include system sessions','system spids background sessions system processes',
+"EXEC sp_WhoIsActive @show_system_spids = 1;",
+'Shows system/background sessions (checkpoint, ghost cleanup, AG redo, etc.), hidden by default.'),
+W('filter','sessions','filter by session, login, host, database or program (and exclude)','filter session login host database program exclude not filter specific user app name',
+"-- one session:\nEXEC sp_WhoIsActive @filter = '{spid}', @filter_type = 'session';\n\n-- by login, host, database or program (% and _ wildcards allowed):\nEXEC sp_WhoIsActive @filter = '{login}',   @filter_type = 'login';\nEXEC sp_WhoIsActive @filter = '{host}%',   @filter_type = 'host';\nEXEC sp_WhoIsActive @filter = '{db}',      @filter_type = 'database';\nEXEC sp_WhoIsActive @filter = '%{program}%', @filter_type = 'program';\n\n-- exclude something, e.g. a monitoring tool:\nEXEC sp_WhoIsActive @not_filter = '%{program}%', @not_filter_type = 'program';",
+'Valid filter types: session, program, database, login, host. Wildcards work for every type except session. @filter and @not_filter can be combined in one call.'),
+W('delta','perf','what is consuming CPU / IO right now (delta)','cpu io reads writes delta right now consuming top cpu hot query heavy',
+"EXEC sp_WhoIsActive\n    @delta_interval = 5,\n    @sort_order = '[CPU_delta] DESC';",
+'Takes two snapshots 5 seconds apart and adds CPU_delta, reads_delta, writes_delta, physical_reads_delta, tempdb and context switch deltas, so you see who is burning resources now, not cumulatively. Sort by [reads_delta] DESC for I/O. Overhead: the call runs at least the interval and collects twice; avoid large intervals on very busy servers.',
+{tri:1,pg:'Top queries by total time',mg:'Long-running queries'}),
+W('columns','perf','choose and order output columns','output column list columns custom output fewer columns',
+"EXEC sp_WhoIsActive\n    @output_column_list = '[dd%][session_id][blocking_session_id][login_name][database_name][wait_info][CPU][reads][sql_text]';",
+'Columns are listed in brackets; % wildcards are allowed (e.g. [dd%] for the duration column). Columns that need an option still need it (e.g. [query_plan] needs @get_plans). Use @help = 1 for the full list.'),
+W('log-table','maint','create a logging table (@return_schema)','logging log to table history capture schema create table destination table monitoring',
+"DECLARE @schema VARCHAR(MAX);\n\nEXEC sp_WhoIsActive\n    @get_transaction_info = 1,\n    @get_outer_command = 1,\n    @find_block_leaders = 1,\n    @format_output = 0,\n    @return_schema = 1,\n    @schema = @schema OUTPUT;\n\nSET @schema = REPLACE(@schema, '<table_name>', '{log_table}');\nPRINT @schema;   -- review it\nEXEC (@schema);",
+'@schema returns a CREATE TABLE with <table_name> to replace. Use exactly the same output-shaping options (get_*, find_block_leaders, output_column_list, format_output) here and in the logging call, or the INSERT will not match. Use a 3-part name such as DBA.dbo.WhoIsActiveLog.'),
+W('log-insert','maint','log a snapshot to the table (SQL Agent job)','logging destination table agent job schedule every minute capture history collection',
+"-- SQL Agent job step (T-SQL), e.g. scheduled every 1 minute:\nEXEC sp_WhoIsActive\n    @get_transaction_info = 1,\n    @get_outer_command = 1,\n    @find_block_leaders = 1,\n    @format_output = 0,\n    @destination_table = '{log_table}';\n\n-- read it back:\nSELECT TOP 100 * FROM {log_table}\nORDER BY collection_time DESC;",
+'Same options as when the table was created. The table gets a collection_time column automatically. Keep @get_plans / @get_locks out of frequent jobs on busy servers.'),
+W('log-cleanup','maint','logging retention cleanup','retention cleanup purge old rows delete history log table',
+"-- second job step: keep {days} days\nDELETE FROM {log_table}\nWHERE collection_time < DATEADD(DAY, -{days}, GETDATE());",
+'Deletes logged rows only (not sp_WhoIsActive itself). For big tables delete in batches (DELETE TOP (10000) ... in a loop) and index collection_time.',{danger:1}),
+W('triage','sessions','3 AM triage call','3 am triage incident emergency outage everything blocking waits tran',
+"EXEC sp_WhoIsActive\n    @find_block_leaders = 1,\n    @get_task_info = 2,\n    @get_transaction_info = 1,\n    @get_outer_command = 1,\n    @get_additional_info = 1,\n    @sort_order = '[blocked_session_count] DESC, [start_time] ASC';",
+'One call for incidents: head blockers first, every wait, log usage, the calling command and Agent job names. No plans or locks so it stays fast on a struggling server; add @get_plans = 1 for a specific session afterwards with @filter.',
+{tri:1,pg:'Find blocking / blocked sessions',mg:'Find blocking / blocked sessions',ml:'List active sessions / running requests'})
+);
+TASKS.push(
+{id:'pg-ro-multi-db',cat:'users',t:'Read-only user across multiple databases',k:'read only readonly user multiple databases all databases grant select default privileges pg_read_all_data',
+pg:{c:"-- once, cluster-wide:\nCREATE ROLE {user} WITH LOGIN PASSWORD '{password}';\n\n-- then connect to EACH database (\\c {db}) and run:\nGRANT CONNECT ON DATABASE {db} TO {user};\nGRANT USAGE ON SCHEMA {schema} TO {user};\nGRANT SELECT ON ALL TABLES IN SCHEMA {schema} TO {user};\nGRANT SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO {user};\nALTER DEFAULT PRIVILEGES FOR ROLE {owner} IN SCHEMA {schema}\n  GRANT SELECT ON TABLES TO {user};\nALTER DEFAULT PRIVILEGES FOR ROLE {owner} IN SCHEMA {schema}\n  GRANT SELECT ON SEQUENCES TO {user};\n\n-- alternative (PostgreSQL 14+), all databases at once:\nGRANT pg_read_all_data TO {user};",
+n:'Roles are cluster-wide but grants are per database, so repeat the block in every database and every schema. {owner} is the role that creates the tables (default privileges only apply to objects that role creates later). pg_read_all_data caveat: it gives SELECT on ALL tables, views and sequences in EVERY database and schema, including future ones and sensitive tables, with no way to exclude some; row-level security policies still apply unless the role has BYPASSRLS. It does not grant CONNECT, so a database that has revoked CONNECT from PUBLIC still needs GRANT CONNECT.',v:'pg_read_all_data: PostgreSQL 14+'},
+ms:NA('See "Grant read-only access" (db_datareader per database).'),mg:NA('See "Grant read-only access" (role readAnyDatabase covers all databases).'),ml:NA('See "Grant read-only access".')},
+{id:'pg-ro-group',cat:'users',t:'Read-only group role for several users (one database)',k:'read only group role readonly_grp nologin multiple users shared role grant select revoke public has_table_privilege',
+pg:{c:"-- group role, no login:\nCREATE ROLE readonly_grp NOLOGIN;\n\nGRANT CONNECT ON DATABASE {db} TO readonly_grp;\nGRANT USAGE ON SCHEMA {schema} TO readonly_grp;\nGRANT SELECT ON ALL TABLES IN SCHEMA {schema} TO readonly_grp;\nGRANT SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO readonly_grp;\nALTER DEFAULT PRIVILEGES FOR ROLE {owner} IN SCHEMA {schema}\n  GRANT SELECT ON TABLES TO readonly_grp;\nALTER DEFAULT PRIVILEGES FOR ROLE {owner} IN SCHEMA {schema}\n  GRANT SELECT ON SEQUENCES TO readonly_grp;\n\n-- users join the group:\nCREATE ROLE {user} WITH LOGIN PASSWORD '{password}';\nGRANT readonly_grp TO {user};\n\n-- tip: stop everyone else connecting by default\nREVOKE CONNECT ON DATABASE {db} FROM PUBLIC;\n\n-- tip: verify\nSELECT has_table_privilege('{user}', '{schema}.{table}', 'SELECT');",
+n:'Grant to the group once; adding a user is then just GRANT readonly_grp TO new_user. Members inherit privileges by default (INHERIT). REVOKE CONNECT FROM PUBLIC means every other role (apps included) now needs an explicit GRANT CONNECT, so check before running it in production.'},
+ms:NA('See "Grant read-only access" (add users to a database role).'),mg:NA('See "Grant read-only access" (custom role + grantRolesToUser).'),ml:NA('See "Grant read-only access".')}
+);
+})();
 (function(){
 'use strict';
 var ENG=[{id:'pg',name:'Aurora PG',full:'Aurora PostgreSQL'},{id:'ms',name:'SQL Server',full:'SQL Server'},{id:'mg',name:'MongoDB',full:'MongoDB (mongosh)'},{id:'ml',name:'MarkLogic',full:'MarkLogic'}];
