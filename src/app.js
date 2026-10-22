@@ -49,8 +49,10 @@ function load(){try{var d=JSON.parse(localStorage.getItem(LS)||'null');if(d&&typ
 function save(){try{localStorage.setItem(LS,JSON.stringify(st))}catch(e){toast('Could not save (storage full or blocked)')}}
 function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show')},1800)}
 /* ---------- theme ---------- */
-function applyTheme(){var t=st.theme;if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);
- $('themeBtn').textContent=st.theme==='auto'?'🌓':(st.theme==='dark'?'🌙':'☀️');$('themeBtn').title='Theme: '+st.theme}
+function applyTheme(){/* theme is owned by the shared bar (mg-shared.js, key mg-theme); st.theme mirrors it */
+ if(window.MG){st.theme=MG.pref();return}
+ var t=st.theme;if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}
+window.addEventListener('mg-theme',function(e){if(st.theme!==e.detail.pref){st.theme=e.detail.pref;save()}});
 /* ---------- data ---------- */
 function allTasks(){var c=st.custom.map(function(s){var o={id:s.id,cat:s.cat,t:s.t,k:s.k||'',custom:1,danger:s.d?1:0};o[s.eng]={c:s.c,n:s.n,d:s.d?1:0};return o});return TASKS.concat(c)}
 function words(s){return String(s).toLowerCase().replace(/[^a-z0-9_$]+/g,' ').split(' ').filter(Boolean)}
@@ -129,8 +131,7 @@ document.addEventListener('input',function(ev){var n=ev.target.dataset&&ev.targe
  document.querySelectorAll('input[data-fill="'+n+'"]').forEach(function(i){if(i!==ev.target)i.value=v})});
 var qt;$('q').addEventListener('input',function(){clearTimeout(qt);var v=this.value;qt=setTimeout(function(){ui.q=v;render()},120)});
 $('clr').onclick=function(){$('q').value='';ui.q='';render();$('q').focus()};
-$('themeBtn').onclick=function(){st.theme=st.theme==='auto'?'dark':st.theme==='dark'?'light':'auto';save();applyTheme();toast('Theme: '+st.theme)};
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+$('themeBtn').onclick=function(){if(window.MG)MG.cycle()};
 function sheet(id,open){$(id).classList.toggle('open',open)}
 $('menuBtn').onclick=function(){sheet('menuSheet',true)};
 $('mClose').onclick=function(){sheet('menuSheet',false)};
