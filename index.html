@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DBA Cheat Sheet · Aurora PG · SQL Server · MongoDB · MarkLogic</title>
-<meta name="description" content="Offline DBA cheat sheet: the same task across Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic.">
+<meta name="description" content="Offline DBA cheat sheet: the same task across Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic, plus Linux basics for Amazon Linux &amp; RHEL.">
 <meta name="theme-color" content="#2f5bd3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1320" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -21,11 +21,11 @@
 :root{--bg:#f3f5f9;--card:#fff;--text:#141a26;--muted:#5f6b80;--line:#e1e6ef;--brand:#2f5bd3;--brand-soft:#e6edfd;
 --code:#f5f7fb;--codetext:#1b2333;--danger:#b52a2a;--danger-soft:#fde9e9;--warn:#8a5e00;--warn-soft:#fff4d6;--ph:#fff1b8;--phtext:#5a4300;
 --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(20,30,60,.07);--r:16px;
---pg:#336791;--ms:#a91d22;--mg:#0b7a3b;--ml:#c2410c;
+--pg:#336791;--ms:#a91d22;--mg:#0b7a3b;--ml:#c2410c;--lx:#6d28d9;
 --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
 :root[data-theme=dark]{--bg:#0b0f18;--card:#141a27;--text:#e6ebf5;--muted:#95a1b8;--line:#232c3d;--brand:#7aa2ff;--brand-soft:#1a2645;
 --code:#0e1320;--codetext:#d7e0f0;--danger:#ff7676;--danger-soft:#3b1c1f;--warn:#f3c55a;--warn-soft:#33290f;--ph:#4a3d0c;--phtext:#ffe69a;
---shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b;--mg:#4cd08a;--ml:#ff9a5c}
+--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b;--mg:#4cd08a;--ml:#ff9a5c;--lx:#b794f6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;padding-bottom:calc(var(--sab) + 40px);overflow-x:hidden}
@@ -248,7 +248,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 <header class="top"><div class="wrap">
  <div class="bar">
   <div class="logo">&gt;_</div>
-  <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic</small></div>
+  <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic · Linux</small></div>
   <button class="ib" id="themeBtn" aria-label="Toggle dark mode" title="Theme" style="display:none">🌓</button>
   <button class="ib" id="menuBtn" aria-label="Menu" title="Menu">⋯</button>
  </div>
@@ -1019,10 +1019,86 @@ O('ola-cleanup','maint','Ola: cleanup jobs (CommandLog, output files, backup and
 'DESTRUCTIVE: deletes history permanently. The installed jobs use 30 days. Deleting backup history removes the msdb restore chain information that tools such as SSMS and sp_BlitzBackups rely on.',{d:1})
 );
 })();
+/* ===== Linux basics: Amazon Linux 2, AL2023, RHEL 8/9 ===== */
+(function(){
+function L(id,t,k,c,n,o){o=o||{};var x={id:id,cat:'linux',t:t,k:'linux bash shell amazon al2 al2023 rhel redhat ec2 '+k,lx:{c:c,n:n,l:'shell',v:o.v||'',d:o.d?1:0}};if(o.d)x.danger=1;return x}
+TASKS.push(
+L('lx-files','Files & directories: list, copy, move, make, remove','ls cp mv mkdir rm touch ln pwd cd directory folder',
+"pwd                          # where am I\nls -lah {dir}                # long list incl. hidden, human sizes\nls -lt | head                # newest first\nmkdir -p {dir}/sub/dir       # create parents too\ncp -a src dst                # copy, keep perms/times (-r for dirs)\nmv old new                   # move / rename\nln -s /target linkname       # symlink\ntouch {file}                 # create empty / update mtime\nrm {file}                    # delete file\nrm -ri {dir}                 # delete dir, ask each time",
+'Same on all three. rm has no recycle bin: prefer -i, and double-check paths before rm -rf.'),
+L('lx-view','View files: cat, less, head, tail -f','cat less head tail follow view read log file',
+"less {file}              # page; /text search, n next, G end, q quit\nhead -n 50 {file}\ntail -n 100 {file}\ntail -f {file}           # follow a growing log (Ctrl+C to stop)\ntail -F {file}           # follow across log rotation\nwc -l {file}             # count lines",
+'less +F {file} follows like tail -f; Ctrl+C then lets you scroll/search.'),
+L('lx-grep','Search text: grep','grep search find text pattern error log regex',
+"grep -i 'error' {file}               # case-insensitive\ngrep -n 'FATAL' {file}               # with line numbers\ngrep -rIl 'max_connections' /etc    # recursive, list files, skip binaries\ngrep -E 'ERROR|FATAL|PANIC' {file}  # extended regex OR\ngrep -v '^#' {file} | grep -v '^$'  # strip comments/blank lines\ngrep -C 3 'deadlock' {file}          # 3 lines of context\nzgrep 'error' {file}.gz              # search gzip'd logs",
+''),
+L('lx-find','Find files: find (by name, size, age)','find locate search file large old big mtime size',
+"find {dir} -name '*.log'                    # by name\nfind {dir} -type f -size +1G                # files over 1 GB\nfind {dir} -type f -mtime +7                # modified >7 days ago\nfind {dir} -type f -mmin -30                # changed in last 30 min\nfind / -xdev -type f -size +500M 2>/dev/null -exec ls -lh {} +\n# delete old files (run WITHOUT -delete first to review):\nfind {dir} -type f -name '*.gz' -mtime +14 -delete",
+'-xdev stays on one filesystem. -delete is permanent; always run the same find without it first.',{d:1}),
+L('lx-perms','Permissions & ownership: chmod, chown','chmod chown chgrp permission owner group rwx umask',
+"ls -l {file}                 # -rwxr-x--- owner group\nchmod 640 {file}             # rw- r-- ---\nchmod u+x script.sh          # add execute for owner\nchmod -R g+rX {dir}          # group read, X = dirs only exec\nchown {user}:{user} {file}\nchown -R postgres:postgres {dir}\nstat {file}                  # full details incl. octal mode\numask                        # default mask for new files",
+'chmod 600 is required for SSH keys and ~/.pgpass.'),
+L('lx-users','Users, groups & sudo','user useradd usermod passwd sudo su id whoami group wheel',
+"whoami; id                   # me + my groups\nid {user}\nsudo -i                      # root shell\nsudo -u {user} -i            # login shell as another user (e.g. postgres)\nsudo useradd -m {user}\nsudo passwd {user}\nsudo usermod -aG wheel {user}   # sudo rights via wheel group\nsudo -l                      # what can I run with sudo\nwho; last | head             # logged in / recent logins\ngetent passwd {user}",
+'AL2/AL2023 default user is ec2-user, RHEL on EC2 is ec2-user too; both are in wheel with NOPASSWD sudo. Edit sudoers only with visudo.'),
+L('lx-ps','Processes: ps, top, pgrep','ps top htop pgrep process cpu running pid',
+"ps -ef | grep -v grep | grep postgres\nps aux --sort=-%mem | head          # top memory users\nps aux --sort=-%cpu | head          # top CPU users\nps -o pid,ppid,etime,cmd -p {pid}   # details for one pid\npgrep -a java                       # pids + command line\ntop                                 # P=cpu M=mem 1=per-CPU q=quit\ntop -b -n 1 | head -30              # one snapshot (scriptable)",
+'htop is not installed by default (EPEL on RHEL; not in AL2023 repos).'),
+L('lx-kill','Stop processes: kill, pkill, nohup, background jobs','kill pkill nohup background job bg fg disown signal terminate',
+"kill {pid}                # polite SIGTERM\nkill -9 {pid}             # SIGKILL, last resort\npkill -f 'pattern'        # by command line\n# keep running after logout:\nnohup ./long_job.sh > job.log 2>&1 &\njobs; fg %1; bg %1        # shell job control\n# or use tmux / screen for interactive sessions",
+'Never kill -9 a database server process (postgres/mongod/sqlservr): use the service stop or the DB cancel/terminate functions. tmux is in AL2023/RHEL repos; screen is not in RHEL 9 or AL2023.',{d:1}),
+L('lx-systemd','Services: systemctl','systemctl systemd service start stop restart enable status daemon',
+"systemctl status {service}\nsudo systemctl start|stop|restart {service}\nsudo systemctl enable --now {service}   # start + on boot\nsystemctl is-active {service}; systemctl is-enabled {service}\nsystemctl list-units --type=service --state=running\nsystemctl --failed\nsudo systemctl daemon-reload            # after editing unit files\nsystemctl cat {service}                 # show unit file",
+'Same on AL2, AL2023 and RHEL 8/9 (all systemd). Service names, e.g. postgresql, mongod, mssql-server, MarkLogic.'),
+L('lx-journal','Logs: journalctl & /var/log','journalctl journal log syslog messages boot error dmesg',
+"journalctl -u {service} -n 100 --no-pager\njournalctl -u {service} -f                # follow\njournalctl -u {service} --since '1 hour ago'\njournalctl -p err -b                      # errors since boot\njournalctl --list-boots\nsudo dmesg -T | tail -50                  # kernel msgs (OOM, disk)\nsudo tail -f /var/log/messages            # AL2 / RHEL",
+'AL2023 has no rsyslog by default, so no /var/log/messages: use journalctl (or dnf install rsyslog). Check OOM kills: journalctl -k | grep -i oom.'),
+L('lx-disk','Disk space: df, du','df du disk space full free usage filesystem inode',
+"df -hT                       # filesystems, type, usage\ndf -i                        # inode usage (full inodes = 'no space')\ndu -sh {dir}\ndu -xh --max-depth=1 {dir} | sort -h | tail -15   # biggest subdirs\nsudo lsof +L1                # deleted files still held open (space not freed)",
+'If df shows full but du does not add up, a process is holding a deleted file open: restart it or truncate via /proc/<pid>/fd.'),
+L('lx-block','Block devices & mounts: lsblk, mount, EBS resize','lsblk mount umount fstab blkid ebs volume nvme xfs growpart resize',
+"lsblk -f                         # disks, partitions, fs, mountpoints\nsudo blkid\nfindmnt {dir}\nsudo mount /dev/nvme1n1 /data\ncat /etc/fstab                   # use UUID=..., add nofail on EC2\n# after growing an EBS volume:\nsudo growpart /dev/nvme0n1 1\nsudo xfs_growfs -d /             # XFS (AL/RHEL default)\nsudo resize2fs /dev/nvme1n1      # ext4",
+'Nitro EC2 shows EBS as /dev/nvme*. A wrong fstab entry without nofail can stop the instance booting; test with sudo mount -a.'),
+L('lx-mem','Memory & CPU: free, vmstat, iostat, sar','free vmstat iostat sar mpstat cpu memory swap load uptime nproc',
+"free -h                      # available is what matters\nuptime                       # load averages\nnproc; lscpu\nvmstat 2 5                   # r=run queue, si/so=swap, wa=IO wait\niostat -xz 2 3               # per-disk util, await\nmpstat -P ALL 2 3\nsar -u 2 5                   # CPU (live)\nsar -r; sar -d               # memory / disk history (today)",
+'iostat, mpstat and sar come from the sysstat package: sudo yum|dnf install -y sysstat; sudo systemctl enable --now sysstat for history.'),
+L('lx-net','Networking: ip, ss, curl, nc, dig','ip ss netstat port listen curl nc netcat dig nslookup network dns connectivity telnet',
+"ip -br addr                     # IPs\nip route\nss -tlnp                        # listening TCP ports + process\nss -tan state established | wc -l\nnc -zv {host} {port}            # is the port reachable\ncurl -sv https://{host}/        # HTTP + TLS details\ncurl -s http://169.254.169.254/latest/meta-data/   # EC2 (IMDSv1)\ndig +short {host}               # DNS\ngetent hosts {host}",
+'netstat/ifconfig need net-tools (not default). nc = nmap-ncat; dig = bind-utils on AL2/RHEL. AL2023/IMDSv2 needs a token for metadata.'),
+L('lx-pkg','Packages: dnf / yum, rpm','dnf yum rpm install update package repo version',
+"# AL2: yum   |   AL2023, RHEL 8/9: dnf (yum is an alias)\nsudo dnf install -y {pkg}\nsudo dnf update {pkg}\ndnf list installed | grep -i {pkg}\ndnf search {pkg}; dnf info {pkg}\ndnf provides '*/pg_dump'       # which package has a file\nrpm -qa | grep -i {pkg}\nrpm -qi {pkg}; rpm -ql {pkg}   # info / files\ncat /etc/os-release            # which distro/version",
+'AL2: amazon-linux-extras for extra topics. AL2023 has no EPEL and no amazon-linux-extras. RHEL needs subscription-manager repos.'),
+L('lx-tar','Archives: tar, gzip','tar gzip gunzip zip unzip compress archive extract xz zstd',
+"tar -czvf {file}.tar.gz {dir}      # create gzip archive\ntar -tzvf {file}.tar.gz            # list contents\ntar -xzvf {file}.tar.gz -C /dest   # extract\ngzip -k big.log; gunzip big.log.gz\nzcat {file}.gz | less\ntar -I 'zstd -T0' -cf x.tar.zst {dir}   # fast, multi-core (zstd pkg)",
+'zip/unzip may need installing.'),
+L('lx-cron','Scheduling: cron','cron crontab schedule job timer',
+"crontab -l              # my jobs\ncrontab -e              # edit\n# m  h  dom mon dow  command\n*/5  *  *   *   *    /home/ec2-user/check.sh >> /tmp/check.log 2>&1\n0    2  *   *   *    /opt/scripts/backup.sh\nsudo crontab -u {user} -l\nls /etc/cron.d /etc/cron.daily\nsystemctl list-timers   # systemd timers",
+'AL2023 does not ship cronie by default: sudo dnf install -y cronie && sudo systemctl enable --now crond (or use systemd timers). Cron has a minimal PATH; use full paths.'),
+L('lx-ssh','SSH, scp, rsync','ssh scp rsync key copy transfer remote tunnel',
+"ssh -i key.pem ec2-user@{host}\nssh -L 5433:{host}:5432 ec2-user@bastion   # tunnel local 5433 -> DB\nscp -i key.pem {file} ec2-user@{host}:/tmp/\nrsync -avz --progress {dir}/ ec2-user@{host}:/backup/{dir}/\nrsync -avn ...          # -n dry run first\nchmod 400 key.pem",
+'rsync --delete removes files at the destination that are not in the source: dry-run first. On AWS, SSM Session Manager avoids opening port 22.'),
+L('lx-selinux','SELinux basics (RHEL)','selinux getenforce setenforce ls -Z context audit denied restorecon semanage',
+"getenforce                       # Enforcing / Permissive / Disabled\nsestatus\nls -Z {dir}                      # file contexts\nps -eZ | grep postgres\nsudo ausearch -m avc -ts recent  # recent denials\nsudo restorecon -Rv {dir}        # reset contexts after moving data\nsudo semanage port -l | grep postgresql\nsudo setenforce 0                # temporary permissive (until reboot)",
+'RHEL is Enforcing by default; AL2023 ships SELinux Permissive; AL2 has it disabled. A new data dir often needs semanage fcontext + restorecon rather than disabling SELinux.'),
+L('lx-time','Time & timezone: timedatectl, chrony','timedatectl timezone time date ntp chrony clock ist utc',
+"timedatectl                           # time, zone, NTP sync\ntimedatectl list-timezones | grep -i kolkata\nsudo timedatectl set-timezone Asia/Kolkata\ndate; date -u\nchronyc tracking; chronyc sources -v  # NTP (Amazon Time Sync 169.254.169.123)",
+'Servers usually stay on UTC; changing the zone affects log timestamps and cron.'),
+L('lx-limits','DBA: ulimit, open files (lsof)','ulimit limits nofile nproc open files lsof too many open files',
+"ulimit -a                    # current shell limits\ncat /proc/{pid}/limits       # limits of a running process\nls /proc/{pid}/fd | wc -l    # its open file count\nsudo lsof -p {pid} | wc -l\nsudo lsof -i :{port}         # who uses a port\ncat /proc/sys/fs/file-nr     # system-wide open files\n# raise: /etc/security/limits.d/99-db.conf\n#   postgres  soft nofile 65536\n#   postgres  hard nofile 65536\n# systemd services ignore limits.conf: use LimitNOFILE= in a drop-in\nsudo systemctl edit {service}",
+'lsof may need installing on AL2023 minimal. After systemctl edit: daemon-reload + restart the service.'),
+L('lx-huge','DBA: huge pages, THP, swappiness','hugepages huge pages thp transparent swappiness sysctl kernel shared memory',
+"grep -i huge /proc/meminfo\ncat /sys/kernel/mm/transparent_hugepage/enabled   # DBs usually want never\nsysctl vm.swappiness vm.nr_hugepages\n# persist in /etc/sysctl.d/99-db.conf, e.g.:\n#   vm.swappiness = 1\n#   vm.nr_hugepages = 2048\nsudo sysctl --system",
+'MongoDB and Oracle recommend disabling THP (newer MongoDB 8 recommends enabling it: check your version docs). Size nr_hugepages to shared_buffers/SGA. Not applicable to RDS/Aurora (managed).'),
+L('lx-info','System info: OS version, kernel, uptime, reboot','os release version kernel uname hostname uptime reboot shutdown hostnamectl',
+"cat /etc/os-release\nuname -r                     # kernel\nhostnamectl\nuptime -s                    # booted at\nsudo needs-restarting -r     # reboot needed after updates? (dnf-utils / yum-utils)\nsudo shutdown -r +5 'patching'  # reboot in 5 min (shutdown -c cancels)",
+'',{d:1})
+);
+})();
 (function(){
 'use strict';
 var ENG=[{id:'pg',name:'Aurora PG',full:'Aurora PostgreSQL'},{id:'ms',name:'SQL Server',full:'SQL Server'},{id:'mg',name:'MongoDB',full:'MongoDB (mongosh)'},{id:'ml',name:'MarkLogic',full:'MarkLogic'}];
 var CATS=[{id:'sessions',name:'Sessions & locks'},{id:'perf',name:'Performance'},{id:'backup',name:'Backup & restore'},{id:'users',name:'Users & permissions'},{id:'storage',name:'Storage & size'},{id:'repl',name:'Replication & HA'},{id:'index',name:'Indexes'},{id:'maint',name:'Maintenance'},{id:'config',name:'Config & server info'}];
+CATS.push({id:'linux',name:'🐧 Linux (AL & RHEL)'});var LX={id:'lx',name:'Linux',full:'Linux · Amazon Linux 2 / AL2023 / RHEL 8-9'};
 var CATNAME={};CATS.forEach(function(c){CATNAME[c.id]=c.name});
 var LANG={pg:'SQL',ms:'T-SQL',mg:'mongosh',ml:'XQuery'};
 var SYN=[
@@ -1078,7 +1154,7 @@ window.addEventListener('mg-theme',function(e){if(st.theme!==e.detail.pref){st.t
 function allTasks(){var c=st.custom.map(function(s){var o={id:s.id,cat:s.cat,t:s.t,k:s.k||'',custom:1,danger:s.d?1:0};o[s.eng]={c:s.c,n:s.n,d:s.d?1:0};return o});return TASKS.concat(c)}
 function words(s){return String(s).toLowerCase().replace(/[^a-z0-9_$]+/g,' ').split(' ').filter(Boolean)}
 var IDX={};
-function indexTask(t){if(IDX[t.id]&&IDX[t.id].src===t)return IDX[t.id];var main=words(t.t+' '+t.k+' '+(CATNAME[t.cat]||''));var code='';ENG.forEach(function(e){var x=t[e.id];if(x)code+=' '+(x.c||x.na||'')+' '+(x.n||'')});
+function indexTask(t){if(IDX[t.id]&&IDX[t.id].src===t)return IDX[t.id];var main=words(t.t+' '+t.k+' '+(CATNAME[t.cat]||''));var code='';ENG.concat([LX]).forEach(function(e){var x=t[e.id];if(x)code+=' '+(x.c||x.na||'')+' '+(x.n||'')});
  return IDX[t.id]={src:t,main:main,code:code.toLowerCase(),title:t.t.toLowerCase()}}
 function lev1(a,b){if(Math.abs(a.length-b.length)>1)return false;var i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}if(++d>1)return false;
  if(a.length>b.length)i++;else if(b.length>a.length)j++;else{ if(a[i+1]===b[j]&&a[i]===b[j+1]){i+=2;j+=2;continue} i++;j++}}return d+(a.length-i)+(b.length-j)<=1}
@@ -1092,7 +1168,7 @@ function tokScore(tok,ix,deep){if(!SYNMAP[tok]&&tok.length>=5&&!deep){for(var sk
 function score(t,q){var ix=indexTask(t);var toks=words(q);if(!toks.length)return 1;var tot=0;
  for(var i=0;i<toks.length;i++){var s=tokScore(toks[i],ix);if(!s)return 0;tot+=s}
  if(ix.title.indexOf(q.toLowerCase().trim())>=0)tot+=4;return tot}
-function hasEng(t){return st.eng.some(function(e){return t[e]&&!t[e].na})}
+function hasEng(t){if(t.lx)return true;return st.eng.some(function(e){return t[e]&&!t[e].na})}
 function visible(){var q=ui.q.trim(),cat=ui.cat,stars=st.stars;var res=[];
  allTasks().forEach(function(t,i){if(cat==='tri'&&!t.tri)return;if(cat==='star'&&stars.indexOf(t.id)<0)return;if(cat==='mine'&&!t.custom)return;
   if(CATNAME[cat]&&t.cat!==cat)return;if(!hasEng(t))return;var s=score(t,q);if(!s)return;res.push({t:t,s:s,i:i,star:stars.indexOf(t.id)>=0})});
@@ -1116,7 +1192,7 @@ function panel(t,e,on){var x=t[e.id];var h='<div class="pn'+(on?' on':'')+'" sty
  h+='<pre>'+codeHtml(x.c)+'</pre>';if(x.n)h+='<p class="note">💡 '+esc(x.n)+'</p>';
  h+='<div class="acts"><button class="btn pri" data-copy="'+esc(t.id)+'|'+e.id+'">'+(x.d?'⚠ Copy':'Copy')+'</button>'+(t.custom?'<button class="btn dz" data-del="'+esc(t.id)+'">Delete snippet</button>':'')+'</div>';
  return h+'</div>'}
-function card(t){var engs=ENG.filter(function(e){return st.eng.indexOf(e.id)>=0&&(t[e.id]||!t.custom)});if(t.custom)engs=engs.filter(function(e){return t[e.id]});
+function card(t){var engs=ENG.filter(function(e){return st.eng.indexOf(e.id)>=0&&(t[e.id]||!t.custom)});if(t.custom)engs=engs.filter(function(e){return t[e.id]});if(t.lx)engs=[LX];
  var act=ui.tab[t.id];if(!engs.some(function(e){return e.id===act})){var f=engs.filter(function(e){return t[e.id]&&!t[e.id].na})[0]||engs[0];act=f&&f.id}
  var star=st.stars.indexOf(t.id)>=0;var note=st.notes[t.id];
  var h='<article class="card" data-id="'+esc(t.id)+'"><div class="ch"><div style="flex:1;min-width:0"><h3>'+esc(t.t)+'</h3><div class="sub"><span class="tag">'+esc(CATNAME[t.cat]||t.cat)+'</span>'+(t.tri?'<span class="tag cu">3 AM</span>':'')+(t.danger?'<span class="tag dz">⚠ Destructive</span>':'')+(t.custom?'<span class="tag cu">Mine</span>':'')+'</div></div>'+
@@ -1158,7 +1234,7 @@ $('menuBtn').onclick=function(){sheet('menuSheet',true)};
 $('mClose').onclick=function(){sheet('menuSheet',false)};
 document.querySelectorAll('.sheet').forEach(function(s){s.addEventListener('click',function(e){if(e.target===s)s.classList.remove('open')})});
 $('aE').innerHTML=ENG.map(function(e){return '<option value="'+e.id+'">'+e.full+'</option>'}).join('');
-$('aC').innerHTML=CATS.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>'}).join('');
+$('aC').innerHTML=CATS.filter(function(c){return c.id!=='linux'}).map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>'}).join('');
 $('mAdd').onclick=function(){sheet('menuSheet',false);['aT','aCode','aN','aK'].forEach(function(i){$(i).value=''});$('aD').checked=false;if(st.eng.length<4)$('aE').value=st.eng[0];sheet('addSheet',true);$('aT').focus()};
 $('aCancel').onclick=function(){sheet('addSheet',false)};
 $('aSave').onclick=function(){var t=$('aT').value.trim(),c=$('aCode').value.replace(/\s+$/,'');if(!t||!c){toast('Title and command are required');return}

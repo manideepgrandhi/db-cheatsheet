@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DBA Cheat Sheet · Aurora PG · SQL Server · MongoDB · MarkLogic</title>
-<meta name="description" content="Offline DBA cheat sheet: the same task across Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic.">
+<meta name="description" content="Offline DBA cheat sheet: the same task across Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic, plus Linux basics for Amazon Linux &amp; RHEL.">
 <meta name="theme-color" content="#2f5bd3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1320" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -21,11 +21,11 @@
 :root{--bg:#f3f5f9;--card:#fff;--text:#141a26;--muted:#5f6b80;--line:#e1e6ef;--brand:#2f5bd3;--brand-soft:#e6edfd;
 --code:#f5f7fb;--codetext:#1b2333;--danger:#b52a2a;--danger-soft:#fde9e9;--warn:#8a5e00;--warn-soft:#fff4d6;--ph:#fff1b8;--phtext:#5a4300;
 --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(20,30,60,.07);--r:16px;
---pg:#336791;--ms:#a91d22;--mg:#0b7a3b;--ml:#c2410c;
+--pg:#336791;--ms:#a91d22;--mg:#0b7a3b;--ml:#c2410c;--lx:#6d28d9;
 --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
 :root[data-theme=dark]{--bg:#0b0f18;--card:#141a27;--text:#e6ebf5;--muted:#95a1b8;--line:#232c3d;--brand:#7aa2ff;--brand-soft:#1a2645;
 --code:#0e1320;--codetext:#d7e0f0;--danger:#ff7676;--danger-soft:#3b1c1f;--warn:#f3c55a;--warn-soft:#33290f;--ph:#4a3d0c;--phtext:#ffe69a;
---shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b;--mg:#4cd08a;--ml:#ff9a5c}
+--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b;--mg:#4cd08a;--ml:#ff9a5c;--lx:#b794f6}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;padding-bottom:calc(var(--sab) + 40px);overflow-x:hidden}
@@ -248,7 +248,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 <header class="top"><div class="wrap">
  <div class="bar">
   <div class="logo">&gt;_</div>
-  <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic</small></div>
+  <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic · Linux</small></div>
   <button class="ib" id="themeBtn" aria-label="Toggle dark mode" title="Theme" style="display:none">🌓</button>
   <button class="ib" id="menuBtn" aria-label="Menu" title="Menu">⋯</button>
  </div>
