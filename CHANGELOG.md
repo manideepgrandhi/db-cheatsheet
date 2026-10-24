@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-24
+- Desktop fix: category and engine chips now wrap onto extra rows on wide screens and mouse devices instead of a single row with a hidden scrollbar (which hid Replication & HA … Linux … My snippets on desktop). Phones keep the swipeable single row. Added chip hover and keyboard focus ring.
+
 ## 2026-10-23 (Linux)
 - New category 🐧 Linux (AL & RHEL): 23 shell tasks valid on Amazon Linux 2, AL2023 and RHEL 8/9 (files, grep/find, permissions, users/sudo, processes, systemctl/journalctl, disk, memory/CPU, networking, dnf/yum/rpm, tar, cron, ssh/rsync, SELinux, timedatectl, ulimit/lsof, hugepages/THP), with distro differences in the notes.
 - Source in `src/data-linux.js`; Linux tasks are shown regardless of the engine filter.

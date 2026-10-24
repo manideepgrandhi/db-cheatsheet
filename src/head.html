@@ -52,6 +52,10 @@ header.top{position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(va
 :root[data-theme=dark] .chip[aria-pressed=true]{color:#0b0f18}
 .chip.e[aria-pressed=true]{background:var(--ec);border-color:var(--ec);color:#fff}
 .chip.e{--ec:var(--brand)}
+/* desktop / mouse: hidden-scrollbar rows can't be swiped, so wrap every chip onto extra rows */
+@media (min-width:760px),(hover:hover) and (pointer:fine){.chips{flex-wrap:wrap;overflow-x:visible;row-gap:6px}}
+.chip:hover{border-color:var(--brand)}
+.chip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .meta{color:var(--muted);font-size:.85rem;margin:10px 2px}
 .banner{background:var(--warn-soft);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin:10px 0;font-size:.9rem}
 .banner ol{margin:6px 0 0;padding-left:20px}
