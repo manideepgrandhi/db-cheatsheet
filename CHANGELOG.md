@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-25 (pglogical)
+- New category 🔁 pglogical (Aurora PG), placed after Replication & HA: 28 tasks for pglogical 2.x on Aurora PostgreSQL, one-way and bi-directional. Covers cluster parameter group setup, prerequisite checks, extension and grants, nodes and interfaces, replication sets (row filters, column lists, sequences), create / alter / resync / drop subscription, replicate_ddl_command, bi-directional setup (forward_origins '{}'), conflict resolution, non-overlapping sequences, monitoring (subscription and table sync status, slot lag and retained WAL, pg_stat_replication, workers) and troubleshooting (down subscriptions, orphaned slots, tables without a primary key, Aurora logs, major version upgrades).
+- Source in `src/data-pglogical.js`. These cards show only the Aurora PG panel (`pgo` flag) and are hidden when the engine filter excludes Aurora PG.
+
 ## 2026-10-24
 - Desktop fix: category and engine chips now wrap onto extra rows on wide screens and mouse devices instead of a single row with a hidden scrollbar (which hid Replication & HA … Linux … My snippets on desktop). Phones keep the swipeable single row. Added chip hover and keyboard focus ring.
 

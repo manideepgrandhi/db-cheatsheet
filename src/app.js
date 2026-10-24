@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var ENG=[{id:'pg',name:'Aurora PG',full:'Aurora PostgreSQL'},{id:'ms',name:'SQL Server',full:'SQL Server'},{id:'mg',name:'MongoDB',full:'MongoDB (mongosh)'},{id:'ml',name:'MarkLogic',full:'MarkLogic'}];
-var CATS=[{id:'sessions',name:'Sessions & locks'},{id:'perf',name:'Performance'},{id:'backup',name:'Backup & restore'},{id:'users',name:'Users & permissions'},{id:'storage',name:'Storage & size'},{id:'repl',name:'Replication & HA'},{id:'index',name:'Indexes'},{id:'maint',name:'Maintenance'},{id:'config',name:'Config & server info'}];
+var CATS=[{id:'sessions',name:'Sessions & locks'},{id:'perf',name:'Performance'},{id:'backup',name:'Backup & restore'},{id:'users',name:'Users & permissions'},{id:'storage',name:'Storage & size'},{id:'repl',name:'Replication & HA'},{id:'pglogical',name:'🔁 pglogical (Aurora PG)'},{id:'index',name:'Indexes'},{id:'maint',name:'Maintenance'},{id:'config',name:'Config & server info'}];
 CATS.push({id:'linux',name:'🐧 Linux (AL & RHEL)'});var LX={id:'lx',name:'Linux',full:'Linux · Amazon Linux 2 / AL2023 / RHEL 8-9'};
 var CATNAME={};CATS.forEach(function(c){CATNAME[c.id]=c.name});
 var LANG={pg:'SQL',ms:'T-SQL',mg:'mongosh',ml:'XQuery'};
@@ -96,7 +96,7 @@ function panel(t,e,on){var x=t[e.id];var h='<div class="pn'+(on?' on':'')+'" sty
  h+='<pre>'+codeHtml(x.c)+'</pre>';if(x.n)h+='<p class="note">💡 '+esc(x.n)+'</p>';
  h+='<div class="acts"><button class="btn pri" data-copy="'+esc(t.id)+'|'+e.id+'">'+(x.d?'⚠ Copy':'Copy')+'</button>'+(t.custom?'<button class="btn dz" data-del="'+esc(t.id)+'">Delete snippet</button>':'')+'</div>';
  return h+'</div>'}
-function card(t){var engs=ENG.filter(function(e){return st.eng.indexOf(e.id)>=0&&(t[e.id]||!t.custom)});if(t.custom)engs=engs.filter(function(e){return t[e.id]});if(t.lx)engs=[LX];
+function card(t){var engs=ENG.filter(function(e){return st.eng.indexOf(e.id)>=0&&(t[e.id]||!t.custom)});if(t.custom)engs=engs.filter(function(e){return t[e.id]});if(t.lx)engs=[LX];if(t.pgo)engs=engs.filter(function(e){return e.id==='pg'});
  var act=ui.tab[t.id];if(!engs.some(function(e){return e.id===act})){var f=engs.filter(function(e){return t[e.id]&&!t[e.id].na})[0]||engs[0];act=f&&f.id}
  var star=st.stars.indexOf(t.id)>=0;var note=st.notes[t.id];
  var h='<article class="card" data-id="'+esc(t.id)+'"><div class="ch"><div style="flex:1;min-width:0"><h3>'+esc(t.t)+'</h3><div class="sub"><span class="tag">'+esc(CATNAME[t.cat]||t.cat)+'</span>'+(t.tri?'<span class="tag cu">3 AM</span>':'')+(t.danger?'<span class="tag dz">⚠ Destructive</span>':'')+(t.custom?'<span class="tag cu">Mine</span>':'')+'</div></div>'+
