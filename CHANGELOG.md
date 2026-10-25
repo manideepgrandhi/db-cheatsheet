@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-25 (tempdb)
+- New category 🗄️ tempdb (SQL Server), placed after Performance: 27 tasks. Space (per-file size/used/free and startup size, user vs internal vs version store, version store holders, tempdb log and log_reuse_wait_desc, drive free space, autogrowth history), who is using tempdb (session + task space joined to SQL text, temp tables, spilling queries), contention (PAGELATCH on PFS/GAM/SGAM decoded, wait stats, file count vs CPUs and TF 1117/1118 notes, memory-optimized tempdb metadata 2019+), fixes (add / resize / equalise / move / remove files, shrink incl. RDS rds_shrink_tempdbfile, freeing caches, KILL, log-full fix, restart), Amazon RDS specifics (CONTROL on tempdb, no DBCC, instance store, Multi-AZ sync), and monitoring (one-query health summary, Agent alerts for 1105/9002, config checklist).
+- Source in `src/data-tempdb.js`. Cards show only the SQL Server panel (new generic `only:'ms'` flag in `app.js`) and are hidden when the engine filter excludes SQL Server.
+- T-SQL not yet run against a live SQL Server.
+
 ## 2026-10-25 (pglogical)
 - New category 🔁 pglogical (Aurora PG), placed after Replication & HA: 28 tasks for pglogical 2.x on Aurora PostgreSQL, one-way and bi-directional. Covers cluster parameter group setup, prerequisite checks, extension and grants, nodes and interfaces, replication sets (row filters, column lists, sequences), create / alter / resync / drop subscription, replicate_ddl_command, bi-directional setup (forward_origins '{}'), conflict resolution, non-overlapping sequences, monitoring (subscription and table sync status, slot lag and retained WAL, pg_stat_replication, workers) and troubleshooting (down subscriptions, orphaned slots, tables without a primary key, Aurora logs, major version upgrades).
 - Source in `src/data-pglogical.js`. These cards show only the Aurora PG panel (`pgo` flag) and are hidden when the engine filter excludes Aurora PG.
