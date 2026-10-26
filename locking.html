@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en" data-mg-site="DB Cheat Sheet · Locking lab" data-mg-here="/db-cheatsheet/" data-mg-local="Cheat sheet|./">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Locking lab · SQL Server vs PostgreSQL · DBA Cheat Sheet</title>
+<meta name="description" content="Interactive, offline guide to locking in SQL Server and PostgreSQL: compatibility matrices, a two-session blocking simulator, isolation levels, lock escalation and diagnostic queries (RDS SQL Server and Aurora PostgreSQL notes).">
+<meta name="theme-color" content="#2f5bd3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1320" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232f5bd3'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E%F0%9F%94%92%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--text:#141a26;--muted:#5f6b80;--line:#e1e6ef;--brand:#2f5bd3;--brand-soft:#e6edfd;
+--code:#f5f7fb;--codetext:#1b2333;--danger:#b52a2a;--danger-soft:#fde9e9;--warn:#8a5e00;--warn-soft:#fff4d6;--ok:#0f7a4a;--ok-soft:#ddf5e9;
+--shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(20,30,60,.07);--r:16px;--pg:#336791;--ms:#a91d22;--sab:env(safe-area-inset-bottom,0px)}
+:root[data-theme=dark]{--bg:#0b0f18;--card:#141a27;--text:#e6ebf5;--muted:#95a1b8;--line:#232c3d;--brand:#7aa2ff;--brand-soft:#1a2645;
+--code:#0e1320;--codetext:#d7e0f0;--danger:#ff7676;--danger-soft:#3b1c1f;--warn:#f3c55a;--warn-soft:#33290f;--ok:#4cd08a;--ok-soft:#12301e;
+--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);--pg:#6ea8dc;--ms:#ff6b6b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:120px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;padding-bottom:calc(var(--sab) + 20px);overflow-x:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--brand)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px}
+header.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 0}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.back{display:inline-flex;align-items:center;min-height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);text-decoration:none;font-weight:700;font-size:.88rem;color:var(--text)}
+.ttl{font-weight:800;font-size:1.05rem;flex:1;min-width:160px}
+.ttl small{display:block;font-weight:500;color:var(--muted);font-size:.75rem}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;background:var(--card);padding:3px;gap:2px}
+.seg button{border:0;background:none;min-height:36px;padding:0 14px;border-radius:999px;font-weight:700;font-size:.86rem;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--ec,var(--brand));color:#fff}
+:root[data-theme=dark] .seg button[aria-pressed=true]{color:#0b0f18}
+.toc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:8px}
+.toc::-webkit-scrollbar{display:none}
+.toc a{flex:none;font-size:.82rem;font-weight:600;text-decoration:none;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--card)}
+.toc a:hover{color:var(--brand);border-color:var(--brand)}
+section{margin:22px 0}
+h2{font-size:1.25rem;margin:0 0 4px}
+h3{font-size:1.02rem;margin:14px 0 6px}
+.lead{color:var(--muted);margin:0 0 12px;font-size:.93rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;min-width:0}
+.card+.card{margin-top:12px}
+.eh{display:inline-block;font-weight:800;font-size:.8rem;letter-spacing:.02em;color:#fff;background:var(--ec);border-radius:8px;padding:2px 9px;margin-bottom:8px}
+:root[data-theme=dark] .eh{color:#0b0f18}
+.eng-ms{--ec:var(--ms)}.eng-pg{--ec:var(--pg)}
+[data-eng=ms] .eng-pg,[data-eng=pg] .eng-ms{display:none!important}
+[data-eng=ms] .only-cmp,[data-eng=pg] .only-cmp{display:none!important}
+.duo{display:grid;gap:12px}
+[data-eng=cmp] .duo{grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));align-items:start}
+.duo>.card+.card{margin-top:0}
+.note{font-size:.88rem;color:var(--muted);margin:8px 0 0}
+.callout{border-radius:12px;padding:10px 12px;font-size:.9rem;margin:10px 0 0;background:var(--brand-soft);border:1px solid var(--line)}
+.callout.w{background:var(--warn-soft)}
+.callout.aws{background:var(--code);border-left:4px solid #ff9900}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{background:var(--code);font-weight:750;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+code,.mono{font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* matrix */
+.mx{border-collapse:separate;border-spacing:3px;width:auto;font-size:.8rem;margin:0 auto}
+.mx th,.mx td{border:0;padding:0;text-align:center}
+.mx th{font:700 .74rem ui-monospace,monospace;color:var(--muted);padding:4px;white-space:nowrap;background:none}
+.mx th.rh{text-align:right}
+.mx th.hl{color:var(--brand)}
+.mx td button{width:44px;height:38px;border-radius:8px;border:1.5px solid transparent;font-weight:800;font-size:1rem}
+.mx.wide td button{width:40px}
+.mx td .y{background:var(--ok-soft);color:var(--ok)}
+.mx td .n{background:var(--danger-soft);color:var(--danger)}
+.mx td button.hl{filter:brightness(.94);border-color:var(--line)}
+:root[data-theme=dark] .mx td button.hl{filter:brightness(1.3)}
+.mx td button.sel{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand)}
+.mx .corner{font:600 .66rem system-ui;color:var(--muted);text-align:right;line-height:1.2}
+.mxbox{overflow-x:auto;padding:4px 0}
+.explain{margin-top:10px;border-radius:12px;padding:10px 12px;background:var(--code);border:1px solid var(--line);font-size:.9rem;min-height:3.2em}
+.explain b.y{color:var(--ok)}.explain b.n{color:var(--danger)}
+.modes{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.modes button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font:700 .76rem ui-monospace,monospace}
+.modes button[aria-pressed=true]{border-color:var(--ec,var(--brand));color:var(--ec,var(--brand))}
+.picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:10px}
+.picker label{font-size:.78rem;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+select{min-height:42px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);padding:0 10px;max-width:100%}
+.verdict{margin-top:8px;font-size:.92rem;border-radius:12px;padding:10px 12px;border:1px solid var(--line)}
+.verdict.y{background:var(--ok-soft)}.verdict.n{background:var(--danger-soft)}
+/* simulator */
+.simtop{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.simtop select{flex:1;min-width:220px}
+.btn{min-height:42px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:.88rem}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme=dark] .btn.pri{color:#0b0f18}
+.btn.sm{min-height:34px;padding:0 12px;font-size:.8rem;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ok{background:#15a46b;border-color:#15a46b;color:#fff}
+.prog{font-size:.82rem;color:var(--muted);margin-left:auto}
+.setup{font-size:.86rem;color:var(--muted);margin:10px 0 0}
+.lanes{display:grid;gap:8px;margin-top:12px}
+.lanehdr,.row{display:grid;grid-template-columns:30px repeat(var(--n),minmax(0,1fr));gap:8px;align-items:start}
+.lanehdr div{font-weight:800;font-size:.82rem;padding:6px 8px;border-radius:10px;background:var(--code);border:1px solid var(--line);min-width:0}
+.lanehdr .st{display:block;font-weight:600;font-size:.74rem;color:var(--muted);margin-top:2px}
+.lanehdr .st.wait{color:var(--warn)}.lanehdr .st.err{color:var(--danger)}
+.row .t{font:700 .74rem ui-monospace,monospace;color:var(--muted);padding-top:9px;text-align:right}
+.ev{border-radius:10px;border:1.5px solid var(--line);background:var(--card);padding:7px 9px;font-size:.82rem;min-width:0;animation:pop .25s ease}
+.ev pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--codetext)}
+.ev .res{display:block;margin-top:5px;font-weight:700;font-size:.78rem}
+.ev.ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}.ev.ok .res{color:var(--ok)}
+.ev.wait{border-color:var(--warn);background:var(--warn-soft)}.ev.wait .res{color:var(--warn)}
+.ev.err{border-color:var(--danger);background:var(--danger-soft)}.ev.err .res{color:var(--danger)}
+.ev.info{border-style:dashed;background:var(--code)}.ev.info .res{color:var(--brand)}
+.ev.cur{box-shadow:0 0 0 2px var(--brand)}
+.ev.past{opacity:.8}
+@keyframes pop{from{transform:translateY(4px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ev{animation:none}html{scroll-behavior:auto}}
+.why{margin-top:12px;border-radius:12px;padding:12px;background:var(--brand-soft);border:1px solid var(--line);font-size:.92rem}
+.why h4{margin:0 0 4px;font-size:.9rem}
+.waitfor{font-weight:700;margin-top:6px;color:var(--warn)}
+.locks{margin-top:12px}
+.locks caption{caption-side:top;text-align:left;font-weight:750;font-size:.84rem;padding:0 0 6px}
+.g{color:var(--ok);font-weight:700}.w{color:var(--warn);font-weight:700}
+/* escalation lab */
+.lab{display:grid;gap:10px;margin-top:6px}
+.lab label{font-size:.82rem;font-weight:700;color:var(--muted)}
+.lab input[type=range]{width:100%}
+.lab .row2{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.gauge{height:14px;border-radius:999px;background:var(--code);border:1px solid var(--line);overflow:hidden}
+.gauge i{display:block;height:100%;background:var(--ok);transition:width .2s}
+.gauge i.hot{background:var(--danger)}
+.out{font-size:.9rem;border-radius:12px;padding:10px 12px;background:var(--code);border:1px solid var(--line)}
+.num{width:110px;min-height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);padding:0 10px}
+.hier{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font:700 .8rem ui-monospace,monospace;margin:6px 0}
+.hier span{border:1.5px solid var(--line);border-radius:8px;padding:3px 8px;background:var(--code)}
+.hier span.on{border-color:var(--danger);color:var(--danger)}
+/* diag */
+.q{border:1px solid var(--line);border-radius:14px;background:var(--card);margin-top:10px;overflow:hidden}
+.qh{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px 6px}
+.qh h4{margin:0;font-size:.95rem;flex:1 1 220px}
+.tag{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--brand-soft);color:var(--brand)}
+.tag.dz{background:var(--danger-soft);color:var(--danger)}
+.tag.ro{background:var(--ok-soft);color:var(--ok)}
+.tag.aws{background:var(--warn-soft);color:var(--warn)}
+.q pre{margin:0 12px;background:var(--code);color:var(--codetext);border:1px solid var(--line);border-radius:10px;padding:10px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:50vh;overflow:auto}
+.q .qf{display:flex;gap:8px;align-items:flex-start;padding:8px 12px 12px}
+.q .qf p{margin:0;font-size:.84rem;color:var(--muted);flex:1}
+.q.dz{border-color:var(--danger)}
+.toast{position:fixed;left:50%;bottom:calc(var(--sab) + 24px);transform:translateX(-50%) translateY(20px);background:#141a26;color:#fff;padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.yes{color:var(--ok);font-weight:800}.no{color:var(--danger);font-weight:800}.mid{color:var(--warn);font-weight:800}
+.foot{color:var(--muted);font-size:.82rem;margin-top:26px}
+@media (max-width:560px){.lanehdr,.row{grid-template-columns:22px repeat(var(--n),minmax(0,1fr));gap:5px}.ev{padding:6px}.ev pre{font-size:11.5px}.mx td button{width:36px;height:34px}.mx.wide td button{width:32px}.mx th{font-size:.66rem;padding:2px}.ttl{min-width:0}}
+@media (max-width:420px){.mx{border-spacing:2px}.mx td button,.mx.wide td button{width:31px;height:32px;font-size:.85rem;border-radius:6px}.mx th{font-size:.62rem;padding:1px}.mx th.corner{font-size:.55rem;white-space:normal;max-width:44px}.card{padding:10px}}
+</style>
+<!--mg:head inline--><style id="mg-shared-css">
+/* mg-shared.css: shared design tokens, header bar and footer. Single source: manideepgrandhi.github.io/assets/ */
+:root{--mg-accent:#0b63c9;--mg-accent-ink:#fff;--mg-bg:#f7f9fc;--mg-surface:#ffffff;--mg-surface2:#eef2f7;--mg-ink:#14213d;--mg-muted:#5b6475;--mg-line:#e3e7ee;
+ --mg-font:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mg-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--mg-radius:10px;--mg-space:12px;--mg-bar-h:44px}
+html[data-theme=dark]{--mg-accent:#5aa2ff;--mg-accent-ink:#06142b;--mg-bg:#0d1424;--mg-surface:#121b2f;--mg-surface2:#1a2540;--mg-ink:#e6ebf5;--mg-muted:#9aa4b6;--mg-line:#26324a;color-scheme:dark}
+html[data-theme=light]{color-scheme:light}
+.mg-bar,.mg-foot{font:500 13.5px/1.4 var(--mg-font);color:var(--mg-ink);background:var(--mg-surface);-webkit-font-smoothing:antialiased;text-align:left;letter-spacing:normal;text-transform:none}
+.mg-bar *,.mg-foot *{box-sizing:border-box}
+.mg-bar{position:relative;z-index:60;border-bottom:1px solid var(--mg-line)}
+.mg-in{max-width:1280px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:10px}
+.mg-bar .mg-in{height:var(--mg-bar-h)}
+.mg-bar a,.mg-foot a{color:inherit;text-decoration:none;background:none;border:0;font:inherit;padding:0;margin:0}
+.mg-brand{display:flex;align-items:center;gap:8px;font-weight:800!important;letter-spacing:-.01em;white-space:nowrap;flex:none}
+.mg-mark{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--mg-accent);color:var(--mg-accent-ink);font:800 11.5px/1 var(--mg-font);letter-spacing:.02em}
+.mg-site{color:var(--mg-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding-left:10px;border-left:1px solid var(--mg-line)}
+.mg-nav{display:flex;align-items:center;gap:2px;margin-left:auto;flex:none}
+.mg-locals{display:flex;gap:2px;padding-right:8px;margin-right:6px;border-right:1px solid var(--mg-line)}
+.mg-bar .mg-nav a{padding:5px 8px!important;border-radius:6px;color:var(--mg-muted);white-space:nowrap}
+.mg-bar .mg-nav a:hover{color:var(--mg-ink);background:var(--mg-surface2)}
+.mg-bar .mg-nav a[aria-current=page]{color:var(--mg-accent);font-weight:700}
+.mg-bar button.mg-btn{all:unset;box-sizing:border-box;display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;border:1px solid var(--mg-line);color:var(--mg-ink);background:var(--mg-surface);font:16px/1 var(--mg-font);cursor:pointer;flex:none}
+.mg-bar button.mg-btn:hover{border-color:var(--mg-accent)}
+.mg-bar button.mg-btn:focus-visible,.mg-bar a:focus-visible,.mg-foot a:focus-visible{outline:2px solid var(--mg-accent);outline-offset:2px}
+.mg-bar .mg-menu{display:none!important}
+.mg-foot{border-top:1px solid var(--mg-line);margin-top:32px;color:var(--mg-muted);font-size:12.5px;padding:14px 0 calc(14px + var(--mg-foot-pad,0px) + env(safe-area-inset-bottom,0px))}
+.mg-foot .mg-in{flex-wrap:wrap;gap:6px 14px;justify-content:space-between}
+.mg-flinks{display:flex;flex-wrap:wrap;gap:4px 12px}
+.mg-foot a:hover{color:var(--mg-accent)}
+.mg-foot a[aria-current=page]{color:var(--mg-ink);font-weight:700}
+@media (max-width:1180px){
+ .mg-bar .mg-menu{display:inline-grid!important}
+ .mg-bar .mg-theme-wrap{margin-left:auto}
+ #mg-theme{margin-left:auto}
+ .mg-nav{display:none;position:absolute;top:100%;left:0;right:0;margin:0;flex-direction:column;align-items:stretch;gap:0;background:var(--mg-surface);border-bottom:1px solid var(--mg-line);padding:6px 10px 10px;box-shadow:0 10px 24px rgba(0,0,0,.12)}
+ .mg-nav.mg-open{display:flex}
+ .mg-locals{flex-direction:column;border-right:0;border-bottom:1px solid var(--mg-line);padding:0 0 6px;margin:0 0 6px}
+ .mg-bar .mg-nav a{padding:9px 10px!important;font-size:14.5px}
+}
+@media (max-width:480px){.mg-name{display:none}.mg-site{border-left:0;padding-left:0;font-weight:700;color:var(--mg-ink)}}
+@media print{.mg-bar,.mg-foot{display:none}}
+
+/* Personal-site family (home, projects, tools, travel): dark palette for their own tokens. Pages opt in with <body class="mg-fam">. */
+html[data-theme=dark] body.mg-fam{--accent:#5aa2ff;--accent-soft:#16294a;--ink:#e6ebf5;--muted:#9aa4b6;--line:#26324a;--bg:#0d1424;--card:#121b2f;--ok:#4cc27a;--warn:#f0a340;--bad:#ff7b7b;--bad-soft:#3a1a1e;--warn-soft:#33270f}
+html[data-theme=dark] .mg-fam :is(.btn-ghost,.btn:not(.btn-primary),.trip,.tl a,.stat,.wish,.toolnav button:not([aria-selected=true]),.tabs a:not([aria-current=page]),input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea,.dlg-h,.dlg-f,dialog:not(#lightbox),.card,.job:before,.tl li:before){background-color:var(--card)}
+html[data-theme=dark] .mg-fam header.hero{background:linear-gradient(180deg,#121b2f 0%,var(--bg) 100%)}
+html[data-theme=dark] .mg-fam :is(.toolnav,nav.tabs){background:rgba(13,20,36,.94)}
+html[data-theme=dark] .mg-fam :is(.tag,.chip){color:#a9cbff}
+html[data-theme=dark] .mg-fam .job ul{color:#c3cad8}
+html[data-theme=dark] .mg-fam .download{background:#16294a}
+html[data-theme=dark] .mg-fam :is(.btn-primary,.toolnav button[aria-selected=true],.tabs a[aria-current=page]){color:#06142b}
+html[data-theme=dark] .mg-fam .btn-primary:hover{background:#8bbcff}
+html[data-theme=dark] .mg-fam .toast{background:#e6ebf5;color:#0d1424}
+html[data-theme=dark] .mg-fam :is(.diff .del,.uni .d){background:#3a1a1e}
+html[data-theme=dark] .mg-fam :is(.diff .add,.uni .a){background:#12301e}
+html[data-theme=dark] .mg-fam .diff .emp{background:#1a2233}
+html[data-theme=dark] .mg-fam :is(.dd,.warnbox){background:#33270f;color:#f3c46b;border-color:#6b4e1a}
+html[data-theme=dark] .mg-fam .banner{color:#f3c46b;border-color:#6b4e1a}
+html[data-theme=dark] .mg-fam .banner.urgent{color:#ffb4b4;border-color:#6b2a2a}
+html[data-theme=dark] .mg-fam .errs{color:#ffb4b4}
+html[data-theme=dark] .mg-fam .btn-danger{border-color:#6b2a2a}
+html[data-theme=dark] .mg-fam .btn-danger:hover{color:#06142b}
+html[data-theme=dark] .mg-fam .mapbox svg>rect{fill:#0e2238}
+html[data-theme=dark] .mg-fam #lightbox .btn{background:rgba(255,255,255,.12)}
+html[data-theme=dark] .mg-fam .mapbox{background:#0e2238}
+html[data-theme=dark] .mg-fam .land{fill:#1f2c42;stroke:#3a4a63}
+html[data-theme=dark] .mg-fam .grat{stroke:#1d3352}
+html[data-theme=dark] .mg-fam .pt circle{stroke:#0d1424}
+html[data-theme=dark] .mg-fam .pt:hover circle,html[data-theme=dark] .mg-fam .pt:focus circle{fill:#5aa2ff}
+html[data-theme=dark] .mg-fam .trip .ph{background:linear-gradient(135deg,#16294a,#121b2f);color:#5d7aa6}
+html[data-theme=dark] .mg-fam .prio.low{background:#1a2233}
+html[data-theme=dark] .mg-fam .stars label{color:#4a5568}
+html[data-theme=dark] .mg-fam .stars input:checked~label,html[data-theme=dark] .mg-fam .stars label:hover,html[data-theme=dark] .mg-fam .stars label:hover~label{color:#f2a900}
+html[data-theme=dark] .mg-fam .card:hover{border-color:#3a5482}
+html[data-theme=dark] .mg-fam .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.5)}
+html[data-theme=dark] .mg-fam .leaflet-container{background:#0e2238}
+html[data-theme=dark] .mg-fam img{filter:none}
+</style><script>(function(){var h=document.documentElement,p;try{p=localStorage.getItem("mg-theme");if(!p){var o=localStorage.getItem("theme");if(o==="dark"||o==="light"){p=o;localStorage.setItem("mg-theme",p)}}}catch(e){}if(p!=="light"&&p!=="dark")p="auto";var d=p==="dark"||(p==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");h.setAttribute("data-theme-pref",p)})();</script><!--/mg:head-->
+</head>
+<body data-eng="ms">
+<!--mg:body inline--><script id="mg-shared-js">
+/* mg-shared.js: shared header bar, footer and theme toggle for all of Manideep's sites.
+   Single source: manideepgrandhi.github.io/assets/. Copied inline into offline apps by scripts/sync-mg-shared.py.
+   Page config on <html>: data-mg-site="Title", data-mg-here="/path/", data-mg-local="Label|#hash,Label|#hash". */
+(function(){
+if(window.MG)return;
+var h=document.documentElement,ds=h.dataset,K="mg-theme";
+var NAV=[["Home","/"],["Projects","/projects/"],["Tools","/tools/"],["pg-commands","/pg-commands/"],["DB Cheat Sheet","/db-cheatsheet/"],["Paisa Diary","/paisa-diary/"],["Travel","/travel/"],["Blog","/blog/"]];
+var ORIGIN=/^(manideepgrandhi\.github\.io|localhost|127\.0\.0\.1)$/.test(location.hostname)?"":"https://manideepgrandhi.github.io";
+var ICON={auto:"◐",light:"☀",dark:"☾"},NEXT={auto:"light",light:"dark",dark:"auto"};
+var mq=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
+function pref(){var p;try{p=localStorage.getItem(K)}catch(e){}return p==="light"||p==="dark"?p:"auto";}
+function resolve(p){return p==="dark"||(p==="auto"&&mq&&mq.matches)?"dark":"light";}
+function apply(p,save){if(save){try{localStorage.setItem(K,p)}catch(e){}}var t=resolve(p);h.setAttribute("data-theme",t);h.setAttribute("data-theme-pref",p);
+ var b=document.getElementById("mg-theme");if(b){b.textContent=ICON[p];b.title="Theme: "+p+" (click to change)";b.setAttribute("aria-label","Theme: "+p+". Change theme");}
+ try{window.dispatchEvent(new CustomEvent("mg-theme",{detail:{pref:p,theme:t}}))}catch(e){}}
+window.MG={pref:pref,theme:function(){return h.getAttribute("data-theme")},set:function(p){apply(p,true)},cycle:function(){apply(NEXT[pref()],true)}};
+if(mq&&mq.addEventListener)mq.addEventListener("change",function(){if(pref()==="auto")apply("auto")});
+window.addEventListener("storage",function(e){if(e.key===K)apply(pref())});
+var here=ds.mgHere||location.pathname;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function link(n,u,cls){var cur=u==="/"?here==="/"||here==="/index.html":here.indexOf(u)===0;return '<a class="'+(cls||"")+'" href="'+ORIGIN+u+'"'+(cur?' aria-current="page"':"")+">"+esc(n)+"</a>";}
+var local=(ds.mgLocal||"").split(",").filter(Boolean).map(function(x){var a=x.split("|");return '<a class="mg-local" href="'+esc(a[1])+'">'+esc(a[0])+"</a>"}).join("");
+var site=ds.mgSite||"";
+var bar='<div class="mg-bar" id="mg-bar" role="navigation" aria-label="Manideep Grandhi sites"><div class="mg-in">'+
+ '<a class="mg-brand" href="'+ORIGIN+'/"><span class="mg-mark" aria-hidden="true">MG</span><span class="mg-name">Manideep Grandhi</span></a>'+
+ (site?'<span class="mg-site">'+esc(site)+"</span>":"")+
+ '<div class="mg-nav" id="mg-nav">'+(local?'<span class="mg-locals">'+local+"</span>":"")+NAV.map(function(n){return link(n[0],n[1])}).join("")+"</div>"+
+ '<button type="button" class="mg-btn" id="mg-theme"></button>'+
+ '<button type="button" class="mg-btn mg-menu" id="mg-menu" aria-expanded="false" aria-controls="mg-nav" aria-label="Sites menu">☰</button>'+
+ "</div></div>";
+var s=document.currentScript;
+if(s&&s.parentNode)s.insertAdjacentHTML("afterend",bar);else document.body.insertAdjacentHTML("afterbegin",bar);
+apply(pref());
+document.getElementById("mg-theme").addEventListener("click",function(){window.MG.cycle()});
+var mb=document.getElementById("mg-menu"),nav=document.getElementById("mg-nav");
+mb.addEventListener("click",function(){var o=nav.classList.toggle("mg-open");mb.setAttribute("aria-expanded",o);mb.textContent=o?"✕":"☰";});
+nav.addEventListener("click",function(e){if(e.target.closest("a")&&nav.classList.contains("mg-open"))mb.click();});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&nav.classList.contains("mg-open"))mb.click();});
+function foot(){if(document.getElementById("mg-foot")||ds.mgNofoot!==undefined)return;var f=document.createElement("div");f.className="mg-foot";f.id="mg-foot";f.setAttribute("role","contentinfo");
+ f.innerHTML='<div class="mg-in"><span>© '+new Date().getFullYear()+' Manideep Grandhi</span><span class="mg-flinks">'+NAV.map(function(n){return link(n[0],n[1])}).join("")+'<a href="https://github.com/manideepgrandhi" rel="noopener">GitHub</a></span></div>';
+ var anchor=document.getElementById("mg-foot-slot");if(anchor)anchor.replaceWith(f);else document.body.appendChild(f);}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",foot);else foot();
+})();
+</script><!--/mg:body-->
+<header class="top"><div class="wrap">
+ <div class="bar">
+  <a class="back" href="./" title="Back to the DBA Cheat Sheet">← Cheat sheet</a>
+  <div class="ttl">🔒 Locking lab<small>How SQL Server and PostgreSQL lock, block and deadlock</small></div>
+  <div class="seg" role="group" aria-label="Engine">
+   <button data-eng="ms" style="--ec:var(--ms)" aria-pressed="true">SQL Server</button>
+   <button data-eng="pg" style="--ec:var(--pg)" aria-pressed="false">PostgreSQL</button>
+   <button data-eng="cmp" aria-pressed="false">Compare</button>
+  </div>
+ </div>
+ <nav class="toc" aria-label="Sections"><a href="#cmp" class="only-cmp">⚖️ Side by side</a><a href="#matrix">🧩 Compatibility</a><a href="#sim">▶️ Simulator</a><a href="#iso">🧪 Isolation levels</a><a href="#gran">📈 Granularity &amp; escalation</a><a href="#diag">🩺 Diagnostic queries</a></nav>
+</div></header>
+<main class="wrap">
+<section id="cmp" class="only-cmp">
+ <h2>⚖️ SQL Server vs PostgreSQL, side by side</h2>
+ <p class="lead">The same questions, answered for each engine. Use the engine switch above to drill into one.</p>
+ <div class="tw"><table>
+  <thead><tr><th>Question</th><th style="color:var(--ms)">SQL Server (incl. RDS)</th><th style="color:var(--pg)">PostgreSQL (incl. Aurora PG)</th></tr></thead>
+  <tbody>
+  <tr><td>Do readers block writers by default?</td><td><span class="no">Yes</span> under the default locking READ COMMITTED (S locks). <span class="yes">No</span> once <code>READ_COMMITTED_SNAPSHOT</code> is ON (RCSI) or with SNAPSHOT.</td><td><span class="yes">No.</span> MVCC: a plain SELECT takes only ACCESS SHARE on the table and never row locks.</td></tr>
+  <tr><td>Do writers block writers on the same row?</td><td><span class="no">Yes</span>, in every isolation level (U/X key locks).</td><td><span class="no">Yes</span>. The second writer waits on the first transaction's ID (<code>Lock:transactionid</code>).</td></tr>
+  <tr><td>Where do row locks live?</td><td>In the lock manager memory: one lock per row/key (plus intent locks on page and table).</td><td>On disk, in the tuple header (<code>xmax</code> + infomask bits). Not in <code>pg_locks</code> and not counted against shared lock memory.</td></tr>
+  <tr><td>Lock escalation?</td><td><span class="mid">Yes.</span> About 5,000 locks by one statement on one object → table (or partition) lock.</td><td><span class="yes">Never.</span> Instead, the shared lock table is sized by <code>max_locks_per_transaction</code>.</td></tr>
+  <tr><td>Version store</td><td>tempdb (or the user DB's persistent version store when ADR is on, SQL Server 2019+). Used only when RCSI / SNAPSHOT / triggers / online index ops need it.</td><td>Old row versions stay in the table itself until VACUUM removes them (bloat if long transactions hold them).</td></tr>
+  <tr><td>Schema / DDL lock</td><td><code>Sch-M</code> (conflicts with everything, including NOLOCK readers' <code>Sch-S</code>).</td><td><code>ACCESS EXCLUSIVE</code> (conflicts with everything, including plain SELECT).</td></tr>
+  <tr><td>A waiting DDL blocks new readers?</td><td><span class="no">Yes</span>: a queued Sch-M blocks new incompatible requests. Use <code>WAIT_AT_LOW_PRIORITY</code> for online index rebuild / partition switch.</td><td><span class="no">Yes</span>: a queued ACCESS EXCLUSIVE blocks every new SELECT. Use <code>SET lock_timeout</code> before DDL and retry.</td></tr>
+  <tr><td>Lock wait timeout default</td><td><code>SET LOCK_TIMEOUT -1</code> (wait forever). Error 1222 when it fires.</td><td><code>lock_timeout = 0</code> (wait forever). SQLSTATE 55P03 when it fires.</td></tr>
+  <tr><td>Deadlock detection</td><td>Lock monitor thread every 5 s (more often after it finds one). Victim = lowest <code>DEADLOCK_PRIORITY</code>, then cheapest to roll back. Error 1205.</td><td>A backend that has waited <code>deadlock_timeout</code> (1 s) checks for a cycle; usually that backend is aborted. SQLSTATE 40P01.</td></tr>
+  <tr><td>Skip locked rows (queues)</td><td><code>WITH (UPDLOCK, READPAST, ROWLOCK)</code></td><td><code>FOR UPDATE SKIP LOCKED</code> (or <code>NOWAIT</code> to error instead)</td></tr>
+  <tr><td>Application / advisory locks</td><td><code>sp_getapplock</code> / <code>sp_releaseapplock</code></td><td><code>pg_advisory_lock</code>, <code>pg_advisory_xact_lock</code>, <code>pg_try_advisory_lock</code></td></tr>
+  <tr><td>"Who blocks whom" view</td><td><code>sys.dm_exec_requests.blocking_session_id</code>, <code>sys.dm_tran_locks</code></td><td><code>pg_blocking_pids(pid)</code>, <code>pg_locks</code> + <code>pg_stat_activity</code></td></tr>
+  <tr><td>Dirty reads possible?</td><td>Yes with READ UNCOMMITTED / <code>NOLOCK</code>.</td><td>Never. READ UNCOMMITTED behaves as READ COMMITTED.</td></tr>
+  <tr><td>Kill a blocker</td><td><code>KILL &lt;spid&gt;</code> (rolls back its open transaction, can take a while).</td><td><code>pg_cancel_backend(pid)</code> (query) or <code>pg_terminate_backend(pid)</code> (whole session).</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="matrix">
+ <h2>🧩 Lock compatibility</h2>
+ <p class="lead">Rows = the mode a session <b>requests</b>; columns = the mode another session already <b>holds</b> on the same resource. Tap or hover a cell to see why; tap a mode name for what takes it.</p>
+ <div class="duo">
+  <div class="card eng-ms"><span class="eh">SQL Server · core lock modes</span>
+   <div class="mxbox"><table class="mx" id="mxMs"></table></div>
+   <div class="explain" id="exMs" aria-live="polite">Pick a cell, e.g. requested <b>IX</b> vs held <b>S</b>.</div>
+   <h3>Will these two statements block? (table level)</h3>
+   <div class="picker"><label>Session 1 is running (holds)<select id="msA"></select></label><label>Session 2 then runs (requests)<select id="msB"></select></label></div>
+   <div class="verdict" id="msV"></div>
+   <h3>Key-range locks (SERIALIZABLE only)</h3>
+   <p class="note" style="margin-top:0">Taken on index keys to stop phantoms. Format is <i>Range-Key</i>: RangeS-S = shared range, shared key. RangeI-N is an insert probing a range.</p>
+   <div class="mxbox"><table class="mx wide" id="mxKr"></table></div>
+   <div class="explain" id="exKr" aria-live="polite">Pick a cell.</div>
+   <p class="note">Also exist but rarer: <code>IU</code>, <code>SIU</code>, <code>UIX</code> (intent-update combos) and <code>BU</code> (bulk update with TABLOCK). Wait types in <code>sys.dm_os_wait_stats</code> are named after the requested mode: <code>LCK_M_S</code>, <code>LCK_M_U</code>, <code>LCK_M_X</code>, <code>LCK_M_IX</code>, <code>LCK_M_SCH_M</code>, <code>LCK_M_RS_S</code>…</p>
+  </div>
+  <div class="card eng-pg"><span class="eh">PostgreSQL · table-level lock modes</span>
+   <div class="mxbox"><table class="mx" id="mxPg"></table></div>
+   <div class="explain" id="exPg" aria-live="polite">Pick a cell or a mode. Every lock here shows up in <code>pg_locks.mode</code> with names like <code>AccessShareLock</code>.</div>
+   <h3>Will these two statements block?</h3>
+   <div class="picker"><label>Session 1 is running (holds)<select id="pgA"></select></label><label>Session 2 then runs (requests)<select id="pgB"></select></label></div>
+   <div class="verdict" id="pgV"></div>
+   <h3>Row-level lock modes</h3>
+   <p class="note" style="margin-top:0">Stored in the tuple, not in <code>pg_locks</code>. A waiter shows up as waiting on the holder's <code>transactionid</code> (and a <code>tuple</code> lock).</p>
+   <div class="mxbox"><table class="mx wide" id="mxRow"></table></div>
+   <div class="explain" id="exRow" aria-live="polite">Pick a cell.</div>
+  </div>
+ </div>
+</section>
+
+<section id="sim">
+ <h2>▶️ Two-session simulator</h2>
+ <p class="lead">Pick a scenario, then step through it. Each step shows what each session ran, who is waiting on whom, and the locks you would see in the DMVs / <code>pg_locks</code> at that moment. Keys: ← → to step.</p>
+ <div class="card" id="simCard">
+  <div class="simtop">
+   <select id="scn" aria-label="Scenario"></select>
+   <button class="btn" id="sPrev">◀ Back</button>
+   <button class="btn pri" id="sNext">Next ▶</button>
+   <button class="btn" id="sPlay">▷ Play</button>
+   <button class="btn" id="sReset">↺ Reset</button>
+   <span class="prog" id="sProg"></span>
+  </div>
+  <p class="setup" id="sSetup"></p>
+  <div class="lanes" id="lanes"></div>
+  <div class="why" id="sWhy" aria-live="polite"></div>
+  <div class="tw locks"><table id="sLocks"></table></div>
+ </div>
+</section>
+
+<section id="iso">
+ <h2>🧪 Isolation levels and what each prevents</h2>
+ <p class="lead"><span class="yes">✓</span> = prevented, <span class="no">✗</span> = can happen.</p>
+ <div class="duo">
+  <div class="card eng-ms"><span class="eh">SQL Server</span>
+   <div class="tw"><table>
+    <thead><tr><th>Level</th><th>Dirty read</th><th>Non-repeatable read</th><th>Phantom</th><th>How it works</th></tr></thead>
+    <tbody>
+    <tr><td><b>READ UNCOMMITTED</b><br><small>= <code>WITH (NOLOCK)</code></small></td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td>No S locks on reads (still Sch-S). Can also miss or double-read rows during page splits / allocation-order scans.</td></tr>
+    <tr><td><b>READ COMMITTED</b><br><small>default, locking</small></td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td>S lock per row/page, released as soon as it is read. Readers wait for writers (LCK_M_S).</td></tr>
+    <tr><td><b>READ COMMITTED SNAPSHOT</b> (RCSI)</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td>Same level name, but each statement reads the last committed version from the version store. Readers don't block writers; writers still block writers.</td></tr>
+    <tr><td><b>REPEATABLE READ</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td><td>S locks held until the transaction ends. New rows matching your WHERE can still appear.</td></tr>
+    <tr><td><b>SNAPSHOT</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td>Transaction-level versioning (needs <code>ALLOW_SNAPSHOT_ISOLATION ON</code>). Updating a row someone else changed since your snapshot → error 3960, transaction rolled back. Write skew still possible.</td></tr>
+    <tr><td><b>SERIALIZABLE</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td>S locks held to the end plus key-range locks. Most blocking and deadlocks.</td></tr>
+    </tbody></table></div>
+   <div class="callout aws"><b>RDS SQL Server:</b> the default is locking READ COMMITTED, same as on-prem (Azure SQL Database defaults to RCSI). You can enable RCSI with <code>ALTER DATABASE … SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE</code> (kicks out open transactions). It adds 14 bytes per modified row and version-store load on tempdb.
+   <br>Check: <code>SELECT name, is_read_committed_snapshot_on, snapshot_isolation_state_desc FROM sys.databases;</code></div>
+  </div>
+  <div class="card eng-pg"><span class="eh">PostgreSQL</span>
+   <div class="tw"><table>
+    <thead><tr><th>Level</th><th>Dirty read</th><th>Non-repeatable read</th><th>Phantom</th><th>Serialization anomaly</th><th>How it works</th></tr></thead>
+    <tbody>
+    <tr><td><b>READ UNCOMMITTED</b></td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td>Accepted but behaves exactly like READ COMMITTED.</td></tr>
+    <tr><td><b>READ COMMITTED</b><br><small>default</small></td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td>New snapshot for every statement. An UPDATE that waited on a row re-checks its WHERE against the newly committed version, then proceeds.</td></tr>
+    <tr><td><b>REPEATABLE READ</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ <small>(stricter than the standard)</small></td><td class="no">✗</td><td>One snapshot for the whole transaction. Updating a row changed by a concurrent committed transaction → <code>40001 could not serialize access due to concurrent update</code>. Retry the transaction.</td></tr>
+    <tr><td><b>SERIALIZABLE</b></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td>Serializable Snapshot Isolation: adds <code>SIReadLock</code> predicate locks (visible in <code>pg_locks</code>, they never block) and aborts one transaction with 40001 when a dangerous pattern appears. Needs a retry loop.</td></tr>
+    </tbody></table></div>
+   <div class="callout aws"><b>Aurora PostgreSQL:</b> set the default with <code>default_transaction_isolation</code> in the DB/cluster parameter group (dynamic) or per session/transaction. Check: <code>SHOW transaction_isolation;</code></div>
+  </div>
+ </div>
+</section>
+
+<section id="gran">
+ <h2>📈 Lock granularity and escalation</h2>
+ <div class="duo">
+  <div class="card eng-ms"><span class="eh">SQL Server</span>
+   <p style="margin:0 0 6px">Locks form a hierarchy. Before taking a row lock, SQL Server takes <b>intent</b> locks (IS / IX) on the page and table, so a later table lock request can see the conflict without scanning every row lock.</p>
+   <div class="hier" id="msHier"><span>DATABASE</span>→<span data-l="obj">OBJECT (table)</span>→<span data-l="hobt">HoBT / partition</span>→<span data-l="page">PAGE</span>→<span data-l="row">KEY / RID (row)</span></div>
+   <p class="note">Escalation goes from row <b>or</b> page locks straight to the table (or partition with <code>LOCK_ESCALATION = AUTO</code>). It never escalates row → page.</p>
+   <div class="lab">
+    <label for="esRows">Rows one UPDATE statement touches: <b id="esRowsV"></b></label>
+    <input type="range" id="esRows" min="0" max="20000" step="100" value="3000">
+    <div class="row2"><label>LOCK_ESCALATION <select id="esMode"><option>TABLE</option><option>AUTO</option><option>DISABLE</option></select></label>
+     <label><input type="checkbox" id="esPart"> table is partitioned</label>
+     <label><input type="checkbox" id="esConf"> another session holds an IX/IS lock on the table</label></div>
+    <div class="gauge" aria-hidden="true"><i id="esBar"></i></div>
+    <div class="out" id="esOut" aria-live="polite"></div>
+   </div>
+   <ul class="note">
+    <li>Trigger: one statement holds about <b>5,000 locks on a single table or index</b> (row + page locks on that object), or lock memory crosses the engine's memory threshold.</li>
+    <li>If escalation can't get the table lock because of another session's conflicting lock, the statement keeps its row/page locks and tries again after every <b>1,250</b> additional locks.</li>
+    <li>Fixes: batch DML in chunks under ~4,000 rows, add an index so fewer rows are touched, <code>LOCK_ESCALATION = AUTO</code> on partitioned tables. <code>DISABLE</code> (or trace flags 1211/1224) trades blocking for lock memory; use with care.</li>
+    <li>Optimized locking (Azure SQL Database and SQL Server 2025, needs ADR) holds one TID lock per modified row only until the row is updated, which mostly removes escalation. Not available on SQL Server 2019/2022, including RDS.</li>
+   </ul>
+   <div class="callout aws"><b>RDS SQL Server:</b> there is no startup-parameter access; global trace flags are set through the DB parameter group, and only the flags AWS lists for your engine version are allowed (check whether 1211/1224 are among them). Prefer per-table <code>ALTER TABLE … SET (LOCK_ESCALATION = …)</code> and batching. See escalation counts per index with <code>sys.dm_db_index_operational_stats</code> (query in the Diagnostics section).</div>
+  </div>
+  <div class="card eng-pg"><span class="eh">PostgreSQL</span>
+   <p style="margin:0 0 6px">PostgreSQL <b>never escalates</b>. Row locks are written into the row itself, so locking a million rows costs no lock memory. What uses the shared lock table is one entry per <b>relation</b> (table, index, partition) per transaction, plus advisory and other object locks.</p>
+   <div class="lab">
+    <label for="pgRel">Tables + indexes + partitions one transaction locks: <b id="pgRelV"></b></label>
+    <input type="range" id="pgRel" min="1" max="3000" step="1" value="40">
+    <div class="row2"><label>max_locks_per_transaction <input class="num" id="pgMlpt" type="number" min="10" value="64"></label>
+     <label>max_connections <input class="num" id="pgMc" type="number" min="1" value="100"></label>
+     <label>concurrent transactions like this <input class="num" id="pgCc" type="number" min="1" value="1"></label></div>
+    <div class="gauge" aria-hidden="true"><i id="pgBar"></i></div>
+    <div class="out" id="pgOut" aria-live="polite"></div>
+   </div>
+   <ul class="note">
+    <li>Shared lock table size ≈ <code>max_locks_per_transaction × (max_connections + max_prepared_transactions)</code>. One transaction may use more than 64 as long as the total fits. When it runs out: <code>ERROR: out of shared memory · HINT: You might need to increase max_locks_per_transaction</code>.</li>
+    <li>Common triggers: <code>pg_dump</code> of thousands of tables, queries over heavily partitioned tables without pruning, a big <code>DROP SCHEMA … CASCADE</code>.</li>
+    <li>Fast-path: each backend keeps its first 16 weak locks (AccessShare / RowShare / RowExclusive) outside the shared table (PG ≤ 17; PG 18 sizes it from <code>max_locks_per_transaction</code>). Beyond that, heavy partition use shows up as <code>LWLock:LockManager</code> waits.</li>
+    <li><b>Advisory locks</b> are app-defined: <code>pg_advisory_lock(key)</code> (session, must unlock), <code>pg_advisory_xact_lock(key)</code> (released at commit), <code>pg_try_advisory_lock(key)</code> (no wait, returns boolean). They appear in <code>pg_locks</code> with <code>locktype = 'advisory'</code>.</li>
+   </ul>
+   <div class="callout aws"><b>Aurora PostgreSQL:</b> <code>max_locks_per_transaction</code> is static, so changing it in the cluster/DB parameter group needs a reboot. In Performance Insights, lock waits appear as <code>Lock:relation</code>, <code>Lock:tuple</code>, <code>Lock:transactionid</code>, <code>Lock:advisory</code>; lock-manager contention as <code>LWLock:lock_manager</code> / <code>LWLock:LockManager</code>.</div>
+  </div>
+ </div>
+</section>
+
+<section id="diag">
+ <h2>🩺 Diagnostic queries</h2>
+ <p class="lead">All read-only except the cards marked <span class="tag dz">⚠ Destructive</span>. Look first; kill only once you know what the head blocker is doing.</p>
+ <div class="duo">
+  <div class="card eng-ms"><span class="eh">SQL Server</span><div id="dqMs"></div></div>
+  <div class="card eng-pg"><span class="eh">PostgreSQL / Aurora PG</span><div id="dqPg"></div></div>
+ </div>
+</section>
+<p class="foot">Based on the Microsoft "Transaction locking and row versioning guide" and the PostgreSQL "Explicit Locking" / "Transaction Isolation" chapters. Lock IDs, page numbers and timings in the simulator are illustrative. <a href="./">← Back to the DBA Cheat Sheet</a></p>
+</main>
+<div id="mg-foot-slot"></div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(function(){t.classList.remove('show')},1800)}
+
+/* ================= engine switch ================= */
+var KEY='dbcs.locking.eng';
+function setEng(e,noScroll){document.body.dataset.eng=e;try{localStorage.setItem(KEY,e)}catch(x){}
+ document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.eng===e)});
+ fillScenarios();}
+document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setEng(b.dataset.eng)})});
+
+/* ================= compatibility data ================= */
+var MS={modes:['IS','S','U','IX','SIX','X','Sch-S','Sch-M'],
+ m:[[1,1,1,1,1,0,1,0],[1,1,1,0,0,0,1,0],[1,1,0,0,0,0,1,0],[1,0,0,1,0,0,1,0],[1,0,0,0,0,0,1,0],[0,0,0,0,0,0,1,0],[1,1,1,1,1,1,1,0],[0,0,0,0,0,0,0,0]],
+ info:{
+ 'IS':'<b>Intent Shared</b>: put on the table and page before taking S locks on rows, so a table-level X request can see that someone is reading inside.',
+ 'S':'<b>Shared</b>: reading under locking READ COMMITTED (released right after the row is read), REPEATABLE READ / SERIALIZABLE (held to the end), or a table-level read with <code>TABLOCK</code>.',
+ 'U':'<b>Update</b>: taken while searching for rows to modify, then converted to X. Only one session can hold U on a resource, which prevents the classic S→X conversion deadlock. Also via <code>UPDLOCK</code>.',
+ 'IX':'<b>Intent Exclusive</b>: on the table and page when rows inside are being modified (INSERT / UPDATE / DELETE).',
+ 'SIX':'<b>Shared with Intent Exclusive</b>: S on the whole resource plus the intent to X some rows, e.g. a transaction that read the table with a table-level S lock and now updates a few rows.',
+ 'X':'<b>Exclusive</b>: data modification. Held until COMMIT / ROLLBACK in every isolation level. At table level it appears after lock escalation or <code>TABLOCKX</code>.',
+ 'Sch-S':'<b>Schema stability</b>: taken by every query while it compiles and runs, including <code>NOLOCK</code>, RCSI and SNAPSHOT readers. Only Sch-M conflicts with it.',
+ 'Sch-M':'<b>Schema modification</b>: DDL such as ALTER TABLE, TRUNCATE, DROP, partition SWITCH, offline clustered index build/rebuild, and the final phase of an online index build. Conflicts with everything, even NOLOCK readers.'}};
+var KR={modes:['S','U','X','RangeS-S','RangeS-U','RangeI-N','RangeX-X'],
+ m:[[1,1,0,1,1,1,0],[1,0,0,1,0,1,0],[0,0,0,0,0,1,0],[1,1,0,1,1,0,0],[1,0,0,1,0,0,0],[1,1,1,0,0,1,0],[0,0,0,0,0,0,0]],
+ info:{'S':'Shared lock on a key (no range).','U':'Update lock on a key.','X':'Exclusive lock on a key.',
+ 'RangeS-S':'SERIALIZABLE range scan: shared lock on the gap and the key. Stops inserts into the scanned range.',
+ 'RangeS-U':'SERIALIZABLE scan with UPDLOCK: shared range, update lock on the key.',
+ 'RangeI-N':'Insert probe: an INSERT tests the range it is about to insert into (no lock on the key itself). Waits if a SERIALIZABLE reader has locked that gap.',
+ 'RangeX-X':'SERIALIZABLE update/delete of a key: exclusive range and key.'}};
+var PGM=['ACCESS SHARE','ROW SHARE','ROW EXCLUSIVE','SHARE UPDATE EXCLUSIVE','SHARE','SHARE ROW EXCLUSIVE','EXCLUSIVE','ACCESS EXCLUSIVE'];
+var PGS=['AS','RS','RE','SUE','S','SRE','E','AE'];
+var PGN=['AccessShareLock','RowShareLock','RowExclusiveLock','ShareUpdateExclusiveLock','ShareLock','ShareRowExclusiveLock','ExclusiveLock','AccessExclusiveLock'];
+var PGC=[[7],[6,7],[4,5,6,7],[3,4,5,6,7],[2,3,5,6,7],[2,3,4,5,6,7],[1,2,3,4,5,6,7],[0,1,2,3,4,5,6,7]];
+var PGWHO=['<code>SELECT</code> (any read-only query on the table). Also <code>COPY TO</code>.',
+ '<code>SELECT … FOR UPDATE / FOR NO KEY UPDATE / FOR SHARE / FOR KEY SHARE</code>.',
+ '<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>MERGE</code>, <code>COPY FROM</code> (plus AccessShare on other referenced tables).',
+ '<code>VACUUM</code> (not FULL), <code>ANALYZE</code>, <code>CREATE INDEX CONCURRENTLY</code>, <code>REINDEX CONCURRENTLY</code>, <code>CREATE STATISTICS</code>, <code>COMMENT ON</code>, and some ALTER TABLE forms (<code>VALIDATE CONSTRAINT</code>, <code>SET STATISTICS</code>, <code>SET (fillfactor…)</code>). Self-conflicting: two VACUUMs on one table can\'t run together.',
+ '<code>CREATE INDEX</code> without CONCURRENTLY (blocks writes, allows reads). Not self-conflicting, so two CREATE INDEX can run at once.',
+ '<code>CREATE TRIGGER</code> and some ALTER TABLE forms such as <code>ADD FOREIGN KEY</code> (on both tables). Self-conflicting.',
+ '<code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code>. Allows only plain reads alongside it.',
+ '<code>DROP TABLE</code>, <code>TRUNCATE</code>, <code>VACUUM FULL</code>, <code>CLUSTER</code>, <code>REFRESH MATERIALIZED VIEW</code>, most <code>ALTER TABLE</code> forms (ADD/DROP COLUMN, ALTER COLUMN TYPE, SET NOT NULL…), and <code>LOCK TABLE</code> without a mode. Blocks even SELECT.'];
+var ROW={modes:['FOR KEY SHARE','FOR SHARE','FOR NO KEY UPDATE','FOR UPDATE'],short:['KEY SHR','SHARE','NO KEY UPD','UPDATE'],
+ c:[[3],[2,3],[1,2,3],[0,1,2,3]],
+ info:['Taken by foreign key checks on the referenced (parent) row when you insert/update a child row, and by <code>SELECT … FOR KEY SHARE</code>. Only stops the key from changing and the row from being deleted.',
+ '<code>SELECT … FOR SHARE</code>: the row can\'t be updated or deleted until you finish.',
+ '<code>UPDATE</code> that does not change a key column, and <code>SELECT … FOR NO KEY UPDATE</code>. Compatible with FK checks.',
+ '<code>DELETE</code>, an <code>UPDATE</code> that changes a column of a unique index usable by a foreign key, and <code>SELECT … FOR UPDATE</code>.']};
+
+/* ================= matrix renderer ================= */
+function matrix(tbl,ex,labels,ok,explain,headInfo,short){
+ var n=labels.length,h='<thead><tr><th class="corner">req ↓ / held →</th>';
+ for(var j=0;j<n;j++)h+='<th scope="col"><button class="mh" data-c="'+j+'" style="all:unset;cursor:pointer">'+esc(short?short[j]:labels[j])+'</button></th>';
+ h+='</tr></thead><tbody>';
+ for(var i=0;i<n;i++){h+='<tr><th scope="row" class="rh"><button class="mh" data-r="'+i+'" style="all:unset;cursor:pointer">'+esc(short?short[i]:labels[i])+'</button></th>';
+  for(j=0;j<n;j++){var y=ok(i,j);h+='<td><button class="'+(y?'y':'n')+'" data-i="'+i+'" data-j="'+j+'" aria-label="requested '+esc(labels[i])+' while '+esc(labels[j])+' is held: '+(y?'compatible':'conflict')+'">'+(y?'✓':'✗')+'</button></td>'}
+  h+='</tr>'}
+ tbl.innerHTML=h+'</tbody>';
+ function hl(i,j){tbl.querySelectorAll('td button').forEach(function(b){b.classList.toggle('hl',(i!=null&&+b.dataset.i===i)||(j!=null&&+b.dataset.j===j))});
+  tbl.querySelectorAll('thead th').forEach(function(t,k){t.classList.toggle('hl',k-1===j)});
+  tbl.querySelectorAll('tbody th').forEach(function(t,k){t.classList.toggle('hl',k===i)})}
+ tbl.addEventListener('mouseover',function(e){var b=e.target.closest('td button');if(b)hl(+b.dataset.i,+b.dataset.j)});
+ tbl.addEventListener('mouseleave',function(){hl(null,null)});
+ tbl.addEventListener('focusin',function(e){var b=e.target.closest('td button');if(b)hl(+b.dataset.i,+b.dataset.j)});
+ tbl.addEventListener('click',function(e){var b=e.target.closest('td button');
+  if(b){tbl.querySelectorAll('td button.sel').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');ex.innerHTML=explain(+b.dataset.i,+b.dataset.j);return}
+  var m=e.target.closest('.mh');if(m){var k=m.dataset.r!=null?+m.dataset.r:+m.dataset.c;hl(m.dataset.r!=null?k:null,m.dataset.c!=null?k:null);ex.innerHTML=headInfo(k)}});
+}
+function verdict(y){return y?'<b class="y">✓ Compatible</b>':'<b class="n">✗ Conflict: the requester waits</b>'}
+matrix($('mxMs'),$('exMs'),MS.modes,function(i,j){return MS.m[i][j]},function(i,j){var a=MS.modes[i],b=MS.modes[j],y=MS.m[i][j];
+ return verdict(y)+' · Session 2 requests <b>'+a+'</b> while session 1 holds <b>'+b+'</b>.<br>'+(y?'Both locks can be held on the same resource at once.':'Session 2 shows <code>wait_type = LCK_M_'+a.toUpperCase().replace('-','_')+'</code> and <code>blocking_session_id</code> = session 1 until session 1 releases '+b+'.')+'<br><small>'+MS.info[a]+'</small>'},
+ function(k){var a=MS.modes[k];var bad=MS.modes.filter(function(_,j){return !MS.m[k][j]});return MS.info[a]+'<br><small>Conflicts with: '+(bad.length?bad.join(', '):'nothing')+'</small>'});
+matrix($('mxKr'),$('exKr'),KR.modes,function(i,j){return KR.m[i][j]},function(i,j){var y=KR.m[i][j];return verdict(y)+' · requested <b>'+KR.modes[i]+'</b> vs existing <b>'+KR.modes[j]+'</b>.<br><small>'+KR.info[KR.modes[i]]+'</small>'},function(k){return KR.info[KR.modes[k]]},['S','U','X','RS-S','RS-U','RI-N','RX-X']);
+function pgok(i,j){return PGC[i].indexOf(j)<0}
+matrix($('mxPg'),$('exPg'),PGM,pgok,function(i,j){var y=pgok(i,j);
+ return verdict(y)+' · Session 2 requests <b>'+PGM[i]+'</b> while session 1 holds <b>'+PGM[j]+'</b>.<br>'+(y?'They coexist.':'Session 2 shows <code>wait_event_type = Lock</code>, <code>wait_event = relation</code>, and <code>pg_blocking_pids()</code> returns session 1.')+'<br><small><b>'+PGM[i]+'</b> ('+PGN[i]+') is taken by: '+PGWHO[i]+'</small>'},
+ function(k){var bad=PGC[k].map(function(x){return PGS[x]});return '<b>'+PGM[k]+'</b> · <code>'+PGN[k]+'</code><br>Taken by: '+PGWHO[k]+'<br><small>Conflicts with: '+bad.join(', ')+'</small>'},PGS);
+matrix($('mxRow'),$('exRow'),ROW.modes,function(i,j){return ROW.c[i].indexOf(j)<0},function(i,j){var y=ROW.c[i].indexOf(j)<0;return verdict(y)+' · requested <b>'+ROW.modes[i]+'</b> vs held <b>'+ROW.modes[j]+'</b>.<br><small>'+ROW.info[i]+'</small>'},function(k){return '<b>'+ROW.modes[k]+'</b>: '+ROW.info[k]},ROW.short);
+
+/* statement pickers */
+var MSCMD=[['SELECT (locking READ COMMITTED)',0,'IS on the table; S on each row only while it is read.'],['SELECT under RCSI / SNAPSHOT / WITH (NOLOCK)',6,'Only Sch-S: no row locks at all.'],['SELECT … WITH (TABLOCK)',1,'S on the whole table.'],['INSERT / UPDATE / DELETE (row locks)',3,'IX on the table; X on each modified row.'],['UPDATE that escalated, or WITH (TABLOCKX)',5,'X on the whole table.'],['CREATE NONCLUSTERED INDEX (offline)',1,'S on the table for the whole build (blocks writers, allows readers).'],['ALTER TABLE / TRUNCATE / DROP / SWITCH',7,'Sch-M on the table.'],['Online index rebuild (ONLINE = ON), final phase',7,'Short Sch-M at the end (S at the start); the long middle phase takes only IS.']];
+var PGCMD=[['SELECT',0],['SELECT … FOR UPDATE / FOR SHARE',1],['INSERT / UPDATE / DELETE / MERGE',2],['VACUUM / ANALYZE (not FULL)',3],['CREATE INDEX CONCURRENTLY',3],['ALTER TABLE … VALIDATE CONSTRAINT',3],['CREATE INDEX (not concurrent)',4],['CREATE TRIGGER / ADD FOREIGN KEY',5],['REFRESH MATERIALIZED VIEW CONCURRENTLY',6],['ALTER TABLE ADD/DROP COLUMN, ALTER TYPE',7],['TRUNCATE / DROP TABLE',7],['VACUUM FULL / CLUSTER',7],['LOCK TABLE t (no mode)',7]];
+function picker(a,b,v,list,run){var o=list.map(function(c,i){return '<option value="'+i+'">'+esc(c[0])+'</option>'}).join('');$(a).innerHTML=o;$(b).innerHTML=o;$(a).value=a==='msA'?'3':'0';$(b).value=a==='msA'?'6':'9';
+ function go(){var x=list[+$(a).value],y=list[+$(b).value];$(v).innerHTML=run(x,y);$(v).className='verdict '+(run.ok?'y':'n')}
+ $(a).onchange=go;$(b).onchange=go;go()}
+var msRun=function(x,y){var ok=MS.m[y[1]][x[1]];msRun.ok=ok;var h=x[1],r=y[1];
+ var s=(ok?'<b class="y">✓ No table-level conflict.</b> ':'<b class="n">✗ Session 2 waits (LCK_M_'+MS.modes[r].toUpperCase().replace('-','_')+').</b> ')+'Session 1 holds <b>'+MS.modes[h]+'</b> on the table ('+x[2]+') Session 2 needs <b>'+MS.modes[r]+'</b> ('+y[2]+')';
+ if(ok&&[0,3].indexOf(h)>=0&&[0,3].indexOf(r)>=0&&(h===3||r===3))s+='<br><small>They can still block each other on the <i>same rows</i> (X vs S/U on a key), just not at table level.</small>';return s};
+picker('msA','msB','msV',MSCMD,msRun);
+var pgRun=function(x,y){var ok=pgok(y[1],x[1]);pgRun.ok=ok;
+ var s=(ok?'<b class="y">✓ No table-level conflict.</b> ':'<b class="n">✗ Session 2 waits (Lock:relation) until session 1\'s transaction ends.</b> ')+'Session 1 holds <b>'+PGM[x[1]]+'</b>; session 2 needs <b>'+PGM[y[1]]+'</b>.';
+ if(ok&&x[1]<=2&&y[1]<=2&&(x[1]>=1&&y[1]>=1))s+='<br><small>If both touch the <i>same row</i>, the second still waits on a row lock (Lock:transactionid).</small>';
+ if(!ok&&y[1]===7)s+='<br><small>⚠ While it waits, every new SELECT on the table queues behind it. Use <code>SET lock_timeout</code>.</small>';return s};
+picker('pgA','pgB','pgV',PGCMD,pgRun);
+/* ================= simulator ================= */
+var MSL=['spid','resource_type','resource','request_mode','request_status'],PGL=['pid','locktype','target','mode','granted'];
+function K(spid,obj,mode,st){return [spid,'KEY',obj,mode,st||'GRANT']}
+function O(spid,obj,mode,st){return [spid,'OBJECT',obj,mode,st||'GRANT']}
+function P(spid,pg,mode,st){return [spid,'PAGE',pg,mode,st||'GRANT']}
+function R(pid,rel,mode,g){return [pid,'relation',rel,mode,g===false?'f':'t']}
+function X(pid,xid,mode,g){return [pid,'transactionid',xid,mode,g===false?'f':'t']}
+var accRow='Accounts Id=1 (8194443284a0)';
+var SC=[
+{id:'ms-rc',e:'ms',t:'UPDATE vs SELECT · locking READ COMMITTED (default)',lanes:['Session 1 · SPID 61','Session 2 · SPID 72'],
+ setup:'dbo.Accounts(Id PK, Balance). Row Id = 1 has Balance 500. READ_COMMITTED_SNAPSHOT is OFF, the default on SQL Server and RDS.',
+ steps:[
+ {ev:[[0,'BEGIN TRAN;\nUPDATE dbo.Accounts SET Balance = Balance - 100\nWHERE Id = 1;','ok','(1 row affected) · transaction still open']],st:['open transaction','idle'],
+  why:'The UPDATE seeks the row with a U lock, converts it to X, and takes IX intent locks on the page and the table. X locks stay until COMMIT or ROLLBACK, whatever the isolation level.',
+  locks:[O(61,'dbo.Accounts','IX'),P(61,'1:2840','IX'),K(61,accRow,'X')]},
+ {ev:[[1,'SELECT Balance FROM dbo.Accounts\nWHERE Id = 1;','wait','⏳ waiting · LCK_M_S']],st:['open transaction','blocked by 61 · LCK_M_S'],wf:'SPID 72 → waits for → SPID 61',
+  why:'Under locking READ COMMITTED a reader needs an S lock on the key. S conflicts with X, so session 2 waits. Its IS locks on the table and page were granted, because IS is compatible with IX.',
+  locks:[O(61,'dbo.Accounts','IX'),P(61,'1:2840','IX'),K(61,accRow,'X'),O(72,'dbo.Accounts','IS'),P(72,'1:2840','IS'),K(72,accRow,'S','WAIT')]},
+ {ev:[[-1,'What the DMVs show now','info','sys.dm_exec_requests: session 72 · status suspended · wait_type LCK_M_S · blocking_session_id 61. Session 61 has no request row at all: it is "sleeping" with open_transaction_count = 1.']],st:['sleeping, open_transaction_count 1','suspended · LCK_M_S'],wf:'SPID 72 → waits for → SPID 61 (head blocker)',
+  why:'This is the classic production picture: the head blocker is idle with an open transaction (an app that forgot to commit, or a user in SSMS). It is invisible in sys.dm_exec_requests, so find it via sys.dm_exec_sessions and its most_recent_sql_handle (see "Head blocker" in the diagnostics below).',
+  locks:[O(61,'dbo.Accounts','IX'),P(61,'1:2840','IX'),K(61,accRow,'X'),O(72,'dbo.Accounts','IS'),P(72,'1:2840','IS'),K(72,accRow,'S','WAIT')]},
+ {ev:[[0,'COMMIT;','ok','committed · X released'],[1,'(resumes)','ok','✔ Balance = 400']],st:['idle','done'],
+  why:'As soon as the X lock goes, the waiting S request is granted and session 2 reads the newly committed value, 400.',locks:[]}]},
+{id:'ms-rcsi',e:'ms',t:'UPDATE vs SELECT · RCSI (READ_COMMITTED_SNAPSHOT ON)',lanes:['Session 1 · SPID 61','Session 2 · SPID 72'],
+ setup:'Same table, but ALTER DATABASE … SET READ_COMMITTED_SNAPSHOT ON has been run. Session 2 uses the default READ COMMITTED level, which now means RCSI.',
+ steps:[
+ {ev:[[0,'BEGIN TRAN;\nUPDATE dbo.Accounts SET Balance = Balance - 100\nWHERE Id = 1;','ok','(1 row affected) · transaction open']],st:['open transaction','idle'],
+  why:'Same X lock as before. Because RCSI is on, the old row image (Balance 500) is also copied to the version store (tempdb, or the persistent version store in the user DB when ADR is on), and the row gets a 14-byte version pointer.',
+  locks:[O(61,'dbo.Accounts','IX'),P(61,'1:2840','IX'),K(61,accRow,'X')]},
+ {ev:[[1,'SELECT Balance FROM dbo.Accounts\nWHERE Id = 1;','ok','✔ Balance = 500, immediately']],st:['open transaction','idle'],
+  why:'RCSI readers take no S locks on rows (only Sch-S on the table). The statement reads the version that was committed when the statement started. Readers don\'t block writers, and writers don\'t block readers.',
+  locks:[O(61,'dbo.Accounts','IX'),P(61,'1:2840','IX'),K(61,accRow,'X')]},
+ {ev:[[1,'UPDATE dbo.Accounts SET Balance = Balance + 1\nWHERE Id = 1;','wait','⏳ waiting · LCK_M_U']],st:['open transaction','blocked by 61 · LCK_M_U'],wf:'SPID 72 → waits for → SPID 61',
+  why:'Writers still block writers. An UPDATE under RCSI must read the current committed row, and it needs a U lock on the key, which conflicts with X.',
+  locks:[O(61,'dbo.Accounts','IX'),P(61,'1:2840','IX'),K(61,accRow,'X'),O(72,'dbo.Accounts','IX'),P(72,'1:2840','IU'),K(72,accRow,'U','WAIT')]},
+ {ev:[[0,'COMMIT;','ok','committed'],[1,'(resumes)','ok','✔ (1 row affected) · 400 → 401']],st:['idle','done'],
+  why:'The waiting UPDATE runs against the newly committed row (400), so session 1\'s change is not lost.',locks:[]}]},
+{id:'ms-snap',e:'ms',t:'SNAPSHOT isolation · update conflict (error 3960)',lanes:['Session 1 · SPID 61','Session 2 · SPID 72'],
+ setup:'ALLOW_SNAPSHOT_ISOLATION is ON. Accounts Id = 1 has Balance 500.',
+ steps:[
+ {ev:[[1,'SET TRANSACTION ISOLATION LEVEL SNAPSHOT;\nBEGIN TRAN;\nSELECT Balance FROM dbo.Accounts WHERE Id = 1;','ok','Balance = 500 · snapshot starts here']],st:['idle','open SNAPSHOT transaction'],
+  why:'A SNAPSHOT transaction gets its point-in-time view at its first data access, not at BEGIN TRAN. It takes no S locks.',locks:[]},
+ {ev:[[0,'UPDATE dbo.Accounts SET Balance = 400\nWHERE Id = 1;   -- autocommit','ok','(1 row affected) · committed']],st:['idle','open SNAPSHOT transaction'],
+  why:'Not blocked: session 2 holds no locks on the row. The old version (500) stays in the version store as long as session 2\'s snapshot may need it, which is why long SNAPSHOT transactions grow the version store.',locks:[]},
+ {ev:[[1,'SELECT Balance FROM dbo.Accounts WHERE Id = 1;','ok','Balance = 500 (still the snapshot)']],st:['idle','open SNAPSHOT transaction'],
+  why:'A repeatable read without any locks. Under RCSI this second read would return 400, because RCSI takes a new snapshot per statement.',locks:[]},
+ {ev:[[1,'UPDATE dbo.Accounts SET Balance = Balance + 1\nWHERE Id = 1;','err','Msg 3960: Snapshot isolation transaction aborted due to update conflict… Retry the transaction.']],st:['idle','rolled back'],
+  why:'SNAPSHOT refuses to overwrite a row that changed after its snapshot began, so it can\'t silently lose session 1\'s update. The app has to catch 3960 and retry the whole transaction.',locks:[]}]},
+{id:'ms-dl',e:'ms',t:'Deadlock · two tables updated in opposite order',lanes:['Session 1 · SPID 61','Session 2 · SPID 72'],
+ setup:'Two procedures touch dbo.A and dbo.B in opposite order.',
+ steps:[
+ {ev:[[0,'BEGIN TRAN;\nUPDATE dbo.A SET Qty = Qty - 1 WHERE Id = 1;','ok','(1 row affected)']],st:['holds X on A:1','idle'],why:'Session 1 owns row A:1.',locks:[O(61,'dbo.A','IX'),K(61,'A Id=1','X')]},
+ {ev:[[1,'BEGIN TRAN;\nUPDATE dbo.B SET Qty = Qty - 1 WHERE Id = 1;','ok','(1 row affected)']],st:['holds X on A:1','holds X on B:1'],why:'Session 2 owns row B:1. No conflict yet.',locks:[O(61,'dbo.A','IX'),K(61,'A Id=1','X'),O(72,'dbo.B','IX'),K(72,'B Id=1','X')]},
+ {ev:[[0,'UPDATE dbo.B SET Qty = Qty + 1 WHERE Id = 1;','wait','⏳ LCK_M_U · blocked by 72']],st:['blocked by 72','holds X on B:1'],wf:'SPID 61 → waits for → SPID 72',why:'Ordinary blocking: it would clear when session 2 commits.',
+  locks:[O(61,'dbo.A','IX'),K(61,'A Id=1','X'),O(61,'dbo.B','IX'),K(61,'B Id=1','U','WAIT'),O(72,'dbo.B','IX'),K(72,'B Id=1','X')]},
+ {ev:[[1,'UPDATE dbo.A SET Qty = Qty + 1 WHERE Id = 1;','wait','⏳ LCK_M_U · blocked by 61']],st:['blocked by 72','blocked by 61'],wf:'61 → 72 → 61 : a cycle. Neither can ever finish.',
+  why:'Each session waits for a lock the other holds. Waiting longer can\'t fix this, so SQL Server\'s lock monitor has to break the cycle.',
+  locks:[O(61,'dbo.A','IX'),K(61,'A Id=1','X'),O(61,'dbo.B','IX'),K(61,'B Id=1','U','WAIT'),O(72,'dbo.B','IX'),K(72,'B Id=1','X'),O(72,'dbo.A','IX'),K(72,'A Id=1','U','WAIT')]},
+ {ev:[[1,'(victim)','err','Msg 1205: Transaction (Process ID 72) was deadlocked on lock resources with another process and has been chosen as the deadlock victim. Rerun the transaction.'],[0,'(resumes)','ok','✔ (1 row affected)']],st:['holds X on A:1 and B:1','rolled back'],
+  why:'The lock monitor checks every 5 s (more often right after it finds deadlocks). The victim is the session with the lowest DEADLOCK_PRIORITY, then the one cheapest to roll back; with equal cost either may be chosen. The graph (xml_deadlock_report) is kept by the system_health Extended Events session. Fixes: access tables in the same order, keep transactions short, index so fewer rows are locked, and retry on 1205.',
+  locks:[O(61,'dbo.A','IX'),K(61,'A Id=1','X'),O(61,'dbo.B','IX'),K(61,'B Id=1','X')]},
+ {ev:[[0,'COMMIT;','ok','committed']],st:['idle','idle'],why:'Done. Session 2\'s app should retry its transaction.',locks:[]}]},
+{id:'ms-esc',e:'ms',t:'Lock escalation · a big UPDATE locks the whole table',lanes:['Session 1 · SPID 61','Session 2 · SPID 72'],
+ setup:'dbo.Orders has 2 million rows, clustered on OrderId, LOCK_ESCALATION = TABLE (the default). Nobody else holds locks on it when session 1 starts.',
+ steps:[
+ {ev:[[0,"BEGIN TRAN;\nUPDATE dbo.Orders SET Status = 'Archived'\nWHERE OrderDate < '2024-01-01';  -- 60,000 rows",'ok','(60000 rows affected) · transaction open']],st:['open transaction · table X','idle'],
+  why:'The statement starts with KEY X + PAGE IX locks. Around 5,000 locks on dbo.Orders, SQL Server escalates: it takes X on the whole table and releases all the row and page locks. That saves lock memory, but now the whole table is locked until COMMIT. sys.dm_db_index_operational_stats.index_lock_promotion_count goes up by 1.',
+  locks:[O(61,'dbo.Orders','X')]},
+ {ev:[[1,"UPDATE dbo.Orders SET Status = 'Shipped'\nWHERE OrderId = 2000001;  -- a 2026 order",'wait','⏳ waiting · LCK_M_IX']],st:['open transaction · table X','blocked by 61 · LCK_M_IX'],wf:'SPID 72 → waits for → SPID 61',
+  why:'Session 2 wants a row session 1 never touched, but first it needs IX on the table, and IX conflicts with the escalated X. Without escalation this would not have blocked.',
+  locks:[O(61,'dbo.Orders','X'),O(72,'dbo.Orders','IX','WAIT')]},
+ {ev:[[-1,'Meanwhile, other sessions','info','Every locking READ COMMITTED SELECT on dbo.Orders now waits too (LCK_M_IS). RCSI / SNAPSHOT readers are unaffected: they only need Sch-S, which is compatible with X.']],st:['open transaction · table X','blocked · LCK_M_IX'],wf:'SPID 72 (and readers) → wait for → SPID 61',
+  why:'Escalation is all-or-nothing for the table (or for the partition with LOCK_ESCALATION = AUTO on a partitioned table). If someone had already held an incompatible lock on the table, escalation would have failed and been retried after every 1,250 more locks.',
+  locks:[O(61,'dbo.Orders','X'),O(72,'dbo.Orders','IX','WAIT')]},
+ {ev:[[0,'COMMIT;','ok','committed'],[1,'(resumes)','ok','✔ (1 row affected)']],st:['idle','done'],
+  why:'Fixes: update in batches of a few thousand rows, each in its own transaction (WHILE loop with TOP (4000)); make sure the WHERE is index-supported; LOCK_ESCALATION = AUTO on partitioned tables. Disabling escalation trades blocking for lock memory.',locks:[]}]},
+{id:'ms-rp',e:'ms',t:'Job queue · UPDLOCK + READPAST (skip locked rows)',lanes:['Worker 1 · SPID 61','Worker 2 · SPID 72'],
+ setup:"dbo.Jobs(Id PK, Status). Rows 1, 2 and 3 have Status = 'new'.",
+ steps:[
+ {ev:[[0,"BEGIN TRAN;\nSELECT TOP (1) Id FROM dbo.Jobs\n  WITH (UPDLOCK, READPAST, ROWLOCK)\nWHERE Status = 'new' ORDER BY Id;",'ok','Id = 1 · U lock held until commit']],st:['claimed job 1','idle'],
+  why:'UPDLOCK keeps a U lock on the row until the transaction ends, so nobody else can claim it. ROWLOCK keeps it at row level.',locks:[O(61,'dbo.Jobs','IX'),P(61,'1:512','IU'),K(61,'Jobs Id=1','U')]},
+ {ev:[[1,"BEGIN TRAN;\nSELECT TOP (1) Id FROM dbo.Jobs\n  WITH (UPDLOCK, READPAST, ROWLOCK)\nWHERE Status = 'new' ORDER BY Id;",'ok','Id = 2 · row 1 skipped']],st:['claimed job 1','claimed job 2'],
+  why:'READPAST skips rows that other sessions have row- or page-locked instead of waiting for them. It still waits for table-level locks.',locks:[O(61,'dbo.Jobs','IX'),P(61,'1:512','IU'),K(61,'Jobs Id=1','U'),O(72,'dbo.Jobs','IX'),P(72,'1:512','IU'),K(72,'Jobs Id=2','U')]},
+ {ev:[[-1,'Without READPAST','info','Worker 2 would wait (LCK_M_U) on row 1 until worker 1 commits, so the workers would run one at a time.']],st:['claimed job 1','claimed job 2'],why:'READPAST deliberately returns an incomplete view: right for queues, wrong for reports.',locks:[O(61,'dbo.Jobs','IX'),P(61,'1:512','IU'),K(61,'Jobs Id=1','U'),O(72,'dbo.Jobs','IX'),P(72,'1:512','IU'),K(72,'Jobs Id=2','U')]},
+ {ev:[[0,"UPDATE dbo.Jobs SET Status = 'done' WHERE Id = 1;\nCOMMIT;",'ok','done'],[1,"UPDATE dbo.Jobs SET Status = 'done' WHERE Id = 2;\nCOMMIT;",'ok','done']],st:['idle','idle'],why:'Both jobs processed in parallel.',locks:[]}]},
+
+{id:'pg-mvcc',e:'pg',t:'MVCC · readers don\'t block writers, writers block writers',lanes:['Session 1 · pid 4101','Session 2 · pid 4202'],
+ setup:'accounts(id PK, balance). Row id = 1 has balance 500. Default READ COMMITTED.',
+ steps:[
+ {ev:[[0,'BEGIN;\nUPDATE accounts SET balance = balance - 100\nWHERE id = 1;','ok','UPDATE 1 · transaction open (xid 7001)']],st:['idle in transaction','idle'],
+  why:'Table lock: RowExclusiveLock (on the table and its indexes). The row lock (FOR NO KEY UPDATE, because no key column changes) is written into the old row version\'s xmax = 7001, so it is not in pg_locks. The session also holds ExclusiveLock on its own transaction ID 7001, and that is what others wait on.',
+  locks:[R(4101,'accounts','RowExclusiveLock'),R(4101,'accounts_pkey','RowExclusiveLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[1,'SELECT balance FROM accounts\nWHERE id = 1;','ok','✔ balance = 500 · no wait']],st:['idle in transaction','idle'],
+  why:'MVCC: the reader sees the last committed version, because transaction 7001 is still in progress. AccessShareLock is compatible with RowExclusiveLock (released at the end of this autocommit statement). Plain readers never wait for writers in PostgreSQL.',
+  locks:[R(4101,'accounts','RowExclusiveLock'),R(4101,'accounts_pkey','RowExclusiveLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[1,'UPDATE accounts SET balance = balance + 1\nWHERE id = 1;','wait','⏳ waiting · Lock / transactionid']],st:['idle in transaction','waiting · Lock:transactionid'],wf:'pid 4202 → waits for → pid 4101   (pg_blocking_pids(4202) = {4101})',
+  why:'Writers do block writers. Session 2 finds the row locked by xid 7001, takes a heavyweight tuple lock (so it is first in line for that row), then asks for ShareLock on transactionid 7001, which it gets only when 4101 commits or rolls back.',
+  locks:[R(4101,'accounts','RowExclusiveLock'),R(4101,'accounts_pkey','RowExclusiveLock'),X(4101,'7001','ExclusiveLock'),R(4202,'accounts','RowExclusiveLock'),R(4202,'accounts_pkey','RowExclusiveLock'),X(4202,'7002','ExclusiveLock'),[4202,'tuple','accounts (0,1)','ExclusiveLock','t'],X(4202,'7001','ShareLock',false)]},
+ {ev:[[0,'COMMIT;','ok','COMMIT'],[1,'(resumes)','ok','✔ UPDATE 1 · 400 → 401']],st:['idle','idle'],
+  why:'In READ COMMITTED the waiter re-reads the newly committed row version, re-checks WHERE id = 1, and applies balance + 1 to 400. Under REPEATABLE READ or SERIALIZABLE it would fail instead: ERROR 40001 could not serialize access due to concurrent update.',locks:[]}]},
+{id:'pg-ddl',e:'pg',t:'ALTER TABLE queued behind a long SELECT · lock queue pile-up',lanes:['Report · pid 5001','Migration · pid 5002','App · 300 sessions'],
+ setup:'orders is a hot table: the app runs hundreds of short SELECTs per second. Someone runs a "harmless" ALTER TABLE during the day while a long report is running.',
+ steps:[
+ {ev:[[0,'BEGIN;\nSELECT customer_id, sum(total)\nFROM orders GROUP BY 1;   -- 4-minute report','ok','running… AccessShareLock held until the transaction ends']],st:['active (holds AccessShare)','idle','fine'],
+  why:'Even a plain SELECT holds AccessShareLock on every table it touched until its transaction ends. A session left "idle in transaction" holds it forever.',locks:[R(5001,'orders','AccessShareLock')]},
+ {ev:[[1,'ALTER TABLE orders ADD COLUMN note text;','wait','⏳ waiting · Lock / relation (AccessExclusiveLock)']],st:['active','waiting for 5001','fine'],wf:'5002 → waits for → 5001',
+  why:'Adding a nullable column is metadata-only and would take milliseconds, but it still needs ACCESS EXCLUSIVE, which conflicts with ACCESS SHARE. So it queues.',locks:[R(5001,'orders','AccessShareLock'),R(5002,'orders','AccessExclusiveLock',false)]},
+ {ev:[[2,'SELECT * FROM orders WHERE id = $1;\n-- × 300 sessions','wait','⏳ all waiting · Lock / relation']],st:['active','waiting for 5001','ALL waiting for 5002'],wf:'app sessions → wait for → 5002 (queued) → waits for → 5001',
+  why:'The pile-up: each new AccessShareLock request conflicts with the <i>queued</i> AccessExclusiveLock, and PostgreSQL won\'t let it jump the queue (that could starve the DDL forever). The app is effectively down although the ALTER hasn\'t even started. pg_blocking_pids() for an app session returns {5002}.',
+  locks:[R(5001,'orders','AccessShareLock'),R(5002,'orders','AccessExclusiveLock',false),R(6101,'orders','AccessShareLock',false),R(6102,'orders','AccessShareLock',false),['…','relation','orders','AccessShareLock','f (× 300)']]},
+ {ev:[[1,"-- cancel it (Ctrl-C or pg_cancel_backend(5002)),\n-- then do it the safe way:\nSET lock_timeout = '3s';\nALTER TABLE orders ADD COLUMN note text;",'err','ERROR: canceling statement due to lock timeout (55P03) after 3 s'],[2,'(queue drains)','ok','✔ app SELECTs run again']],st:['active','gave up after 3 s','fine'],
+  why:'With lock_timeout the DDL gives up after a few seconds instead of holding the queue for minutes. Run it in a retry loop, off-peak, after checking for long or idle-in-transaction sessions.',locks:[R(5001,'orders','AccessShareLock')]},
+ {ev:[[0,'COMMIT;','ok','report done'],[1,"ALTER TABLE orders ADD COLUMN note text;\n-- retry, lock_timeout still 3s",'ok','✔ ALTER TABLE · 5 ms']],st:['idle','done','fine'],why:'Once the long transaction is gone the DDL gets its lock immediately and finishes in milliseconds. (Some DDL rewrites the whole table, e.g. ALTER COLUMN TYPE; that holds ACCESS EXCLUSIVE for the whole rewrite.)',locks:[]}]},
+{id:'pg-dl',e:'pg',t:'Deadlock · two rows updated in opposite order',lanes:['Session 1 · pid 4101','Session 2 · pid 4202'],
+ setup:'accounts rows id = 1 and id = 2. Two transfers run at the same time in opposite directions.',
+ steps:[
+ {ev:[[0,'BEGIN;\nUPDATE accounts SET balance = balance - 10\nWHERE id = 1;','ok','UPDATE 1 (xid 7001)']],st:['holds row 1','idle'],why:'Session 1 locks row 1.',locks:[R(4101,'accounts','RowExclusiveLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[1,'BEGIN;\nUPDATE accounts SET balance = balance - 10\nWHERE id = 2;','ok','UPDATE 1 (xid 7002)']],st:['holds row 1','holds row 2'],why:'Session 2 locks row 2.',locks:[R(4101,'accounts','RowExclusiveLock'),X(4101,'7001','ExclusiveLock'),R(4202,'accounts','RowExclusiveLock'),X(4202,'7002','ExclusiveLock')]},
+ {ev:[[0,'UPDATE accounts SET balance = balance + 10\nWHERE id = 2;','wait','⏳ Lock / transactionid']],st:['waiting for 4202','holds row 2'],wf:'4101 → waits for → 4202',why:'Ordinary row-lock wait on transaction 7002.',
+  locks:[R(4101,'accounts','RowExclusiveLock'),X(4101,'7001','ExclusiveLock'),[4101,'tuple','accounts (0,2)','ExclusiveLock','t'],X(4101,'7002','ShareLock',false),R(4202,'accounts','RowExclusiveLock'),X(4202,'7002','ExclusiveLock')]},
+ {ev:[[1,'UPDATE accounts SET balance = balance + 10\nWHERE id = 1;','wait','⏳ Lock / transactionid']],st:['waiting for 4202','waiting for 4101'],wf:'4101 → 4202 → 4101 : a cycle',
+  why:'Both are now waiting on each other. Nothing happens for deadlock_timeout (default 1 s): until then it is just a normal lock wait, because the deadlock check is expensive and most waits resolve on their own.',
+  locks:[R(4101,'accounts','RowExclusiveLock'),X(4101,'7001','ExclusiveLock'),[4101,'tuple','accounts (0,2)','ExclusiveLock','t'],X(4101,'7002','ShareLock',false),R(4202,'accounts','RowExclusiveLock'),X(4202,'7002','ExclusiveLock'),[4202,'tuple','accounts (0,1)','ExclusiveLock','t'],X(4202,'7001','ShareLock',false)]},
+ {ev:[[1,'(after deadlock_timeout)','err','ERROR: deadlock detected (40P01)\nDETAIL: Process 4202 waits for ShareLock on transaction 7001; blocked by process 4101.\nProcess 4101 waits for ShareLock on transaction 7002; blocked by process 4202.'],[0,'(resumes)','ok','✔ UPDATE 1']],st:['holds rows 1 and 2','transaction aborted'],
+  why:'Each waiting backend runs the deadlock check once its own wait passes deadlock_timeout, and the backend that finds the cycle aborts itself. Here session 1 had already waited more than 1 s (its check found no cycle then), so session 2\'s check finds it and session 2 is the victim. If both had started waiting within 1 s of each other, session 1\'s check would fire first and session 1 would be aborted. There is no cost-based victim choice as in SQL Server. The DETAIL goes to the server log (Aurora: the postgresql.log in CloudWatch / RDS logs); pg_stat_database.deadlocks counts them. Fixes: lock rows in a consistent order (e.g. SELECT … ORDER BY id FOR UPDATE first), keep transactions short, retry on 40P01.',
+  locks:[R(4101,'accounts','RowExclusiveLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[0,'COMMIT;','ok','COMMIT'],[1,'ROLLBACK;','ok','ROLLBACK (retry the transfer)']],st:['idle','idle'],why:'Session 2 must roll back its aborted transaction and retry.',locks:[]}]},
+{id:'pg-skip',e:'pg',t:'Job queue · SELECT … FOR UPDATE SKIP LOCKED',lanes:['Worker 1 · pid 4101','Worker 2 · pid 4202'],
+ setup:"jobs(id PK, status). Rows 1, 2 and 3 have status = 'new'.",
+ steps:[
+ {ev:[[0,"BEGIN;\nSELECT id FROM jobs WHERE status = 'new'\nORDER BY id LIMIT 1\nFOR UPDATE SKIP LOCKED;",'ok','id = 1']],st:['claimed job 1','idle'],
+  why:'RowShareLock on the table; the FOR UPDATE row lock goes into row 1\'s header and needs a transaction ID.',locks:[R(4101,'jobs','RowShareLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[1,"BEGIN;\nSELECT id FROM jobs WHERE status = 'new'\nORDER BY id LIMIT 1\nFOR UPDATE SKIP LOCKED;",'ok','id = 2 · row 1 skipped']],st:['claimed job 1','claimed job 2'],
+  why:'SKIP LOCKED silently skips rows that can\'t be locked right now. Each worker gets a different job, with no waiting.',locks:[R(4101,'jobs','RowShareLock'),X(4101,'7001','ExclusiveLock'),R(4202,'jobs','RowShareLock'),X(4202,'7002','ExclusiveLock')]},
+ {ev:[[-1,'Without SKIP LOCKED','info','Plain FOR UPDATE: worker 2 waits on row 1 (Lock:transactionid). With NOWAIT: ERROR 55P03 could not obtain lock on row in relation "jobs".']],st:['claimed job 1','claimed job 2'],
+  why:'SKIP LOCKED deliberately gives an inconsistent view: right for queues, wrong for reports. It skips locked rows only; it still waits for a conflicting table-level lock.',locks:[R(4101,'jobs','RowShareLock'),X(4101,'7001','ExclusiveLock'),R(4202,'jobs','RowShareLock'),X(4202,'7002','ExclusiveLock')]},
+ {ev:[[0,"UPDATE jobs SET status = 'done' WHERE id = 1;\nCOMMIT;",'ok','COMMIT'],[1,"UPDATE jobs SET status = 'done' WHERE id = 2;\nCOMMIT;",'ok','COMMIT']],st:['idle','idle'],why:'Both jobs processed in parallel.',locks:[]}]},
+{id:'pg-fk',e:'pg',t:'Foreign keys and row lock modes · FOR KEY SHARE vs updates and deletes',lanes:['Session 1 · pid 4101','Session 2 · pid 4202'],
+ setup:'customers(id PK, email) and orders(id, customer_id REFERENCES customers). Customer 42 exists and has no orders yet.',
+ steps:[
+ {ev:[[0,'BEGIN;\nINSERT INTO orders (customer_id, total)\nVALUES (42, 99.00);','ok','INSERT 0 1 · transaction open']],st:['idle in transaction','idle'],
+  why:'The foreign key check locks customers row 42 with FOR KEY SHARE, the weakest row lock. It only stops the key from changing and the row from being deleted.',locks:[R(4101,'orders','RowExclusiveLock'),R(4101,'customers','RowShareLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[1,"UPDATE customers SET email = 'new@example.com'\nWHERE id = 42;",'ok','✔ UPDATE 1 · no wait']],st:['idle in transaction','idle'],
+  why:'This UPDATE doesn\'t change a key column, so it takes FOR NO KEY UPDATE, which is compatible with FOR KEY SHARE (see the row-lock matrix above).',locks:[R(4101,'orders','RowExclusiveLock'),R(4101,'customers','RowShareLock'),X(4101,'7001','ExclusiveLock')]},
+ {ev:[[1,'DELETE FROM customers WHERE id = 42;','wait','⏳ waiting · Lock / transactionid']],st:['idle in transaction','waiting for 4101'],wf:'4202 → waits for → 4101',
+  why:'DELETE needs FOR UPDATE, which conflicts with FOR KEY SHARE, so it waits for session 1 to finish.',locks:[R(4101,'orders','RowExclusiveLock'),R(4101,'customers','RowShareLock'),X(4101,'7001','ExclusiveLock'),R(4202,'customers','RowExclusiveLock'),[4202,'tuple','customers (0,42)','ExclusiveLock','t'],X(4202,'7001','ShareLock',false)]},
+ {ev:[[0,'COMMIT;','ok','COMMIT'],[1,'(resumes)','err','ERROR: update or delete on table "customers" violates foreign key constraint "orders_customer_id_fkey" on table "orders" (23503)']],st:['idle','failed'],
+  why:'Now the order is committed, so the delete would orphan it and the FK check rejects it. Had session 1 rolled back, the DELETE would have succeeded.',locks:[]}]}
+];
+var cur=null,pos=0,timer=null;
+function fillScenarios(){var e=document.body.dataset.eng,sel=$('scn'),prev=sel.value;
+ var list=SC.filter(function(s){return e==='cmp'||s.e===e});
+ function opt(s){return '<option value="'+s.id+'">'+esc(s.t)+'</option>'}
+ sel.innerHTML=e==='cmp'?'<optgroup label="SQL Server">'+SC.filter(function(s){return s.e==='ms'}).map(opt).join('')+'</optgroup><optgroup label="PostgreSQL">'+SC.filter(function(s){return s.e==='pg'}).map(opt).join('')+'</optgroup>':list.map(opt).join('');
+ if(list.some(function(s){return s.id===prev}))sel.value=prev;
+ load(sel.value)}
+function load(id){stop();cur=SC.filter(function(s){return s.id===id})[0];pos=0;draw()}
+function draw(){var s=cur,n=s.lanes.length,isPg=s.e==='pg',last=s.steps[pos-1];
+ $('sSetup').innerHTML='<b>'+(isPg?'PostgreSQL':'SQL Server')+' setup:</b> '+esc(s.setup);
+ $('sProg').textContent='Step '+pos+' / '+s.steps.length;
+ $('sPrev').disabled=pos===0;$('sNext').disabled=pos>=s.steps.length;$('sPlay').disabled=pos>=s.steps.length&&!timer;
+ var st=last?last.st:s.lanes.map(function(){return 'idle'});
+ var h='<div class="lanehdr" style="--n:'+n+'"><span></span>'+s.lanes.map(function(l,i){var t=st[i]||'';var c=/wait|blocked|ALL waiting/i.test(t)?' wait':/rolled back|aborted|failed|gave up/i.test(t)?' err':'';return '<div style="border-top:3px solid '+(isPg?'var(--pg)':'var(--ms)')+'">'+esc(l)+'<span class="st'+c+'">'+esc(t)+'</span></div>'}).join('')+'</div>';
+ for(var k=0;k<pos;k++){var step=s.steps[k];
+  h+='<div class="row" style="--n:'+n+'"><span class="t">t'+(k+1)+'</span>';
+  var span=step.ev.filter(function(e){return e[0]<0})[0];
+  if(span){h+='<div class="ev info'+(k===pos-1?' cur':' past')+'" style="grid-column:2 / span '+n+'"><b>'+esc(span[1])+'</b><span class="res">'+esc(span[3])+'</span></div>'}
+  else for(var l=0;l<n;l++){var e=step.ev.filter(function(x){return x[0]===l})[0];
+   if(!e){h+='<div></div>';continue}
+   h+='<div class="ev '+e[2]+(k===pos-1?' cur':' past')+'"><pre>'+esc(e[1])+'</pre><span class="res">'+(e[2]==='ok'?'':e[2]==='err'?'✗ ':'')+esc(e[3])+'</span></div>'}
+  h+='</div>'}
+ if(!pos)h+='<div class="row" style="--n:'+n+'"><span></span><div class="ev info" style="grid-column:2 / span '+n+'">Press <b>Next ▶</b> to run the first statement.</div></div>';
+ $('lanes').innerHTML=h;
+ $('sWhy').innerHTML=last?'<h4>Why</h4>'+last.why+(last.wf?'<div class="waitfor">⛓ '+esc(last.wf)+'</div>':''):'<h4>What to watch</h4>Which session waits, on which lock mode, and who releases it. The table below mirrors '+(isPg?'<code>pg_locks</code> (current database, excluding virtualxid locks)':'<code>sys.dm_tran_locks</code> (excluding the DATABASE S lock every session holds)')+'.';
+ var L=isPg?PGL:MSL,rows=last?last.locks:[];
+ $('sLocks').innerHTML='<caption>'+(isPg?'pg_locks':'sys.dm_tran_locks')+' at this step</caption><thead><tr>'+L.map(function(c){return '<th>'+c+'</th>'}).join('')+'</tr></thead><tbody>'+
+  (rows.length?rows.map(function(r){var g=r[4];var cls=(g==='GRANT'||g==='t')?'g':'w';return '<tr>'+r.map(function(c,i){return '<td'+(i===4?' class="'+cls+'"':'')+(i===3?' class="mono"':'')+'>'+esc(c)+'</td>'}).join('')+'</tr>'}).join(''):'<tr><td colspan="5" class="note">No locks held on these objects.</td></tr>')+'</tbody>';
+}
+function stop(){if(timer){clearInterval(timer);timer=null}$('sPlay').textContent='▷ Play'}
+$('scn').addEventListener('change',function(){load(this.value)});
+$('sNext').onclick=function(){if(pos<cur.steps.length){pos++;draw()}};
+$('sPrev').onclick=function(){stop();if(pos>0){pos--;draw()}};
+$('sReset').onclick=function(){stop();pos=0;draw()};
+$('sPlay').onclick=function(){if(timer){stop();draw();return}if(pos>=cur.steps.length)pos=0;$('sPlay').textContent='❚❚ Pause';pos++;draw();
+ timer=setInterval(function(){if(pos>=cur.steps.length){stop();draw();return}pos++;draw()},2600)};
+document.addEventListener('keydown',function(e){if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;var r=$('simCard').getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;
+ if(e.key==='ArrowRight'){$('sNext').click();e.preventDefault()}else if(e.key==='ArrowLeft'){$('sPrev').click();e.preventDefault()}});
+
+/* ================= escalation labs ================= */
+function esc1(){var rows=+$('esRows').value,mode=$('esMode').value,part=$('esPart').checked,conf=$('esConf').checked;
+ $('esRowsV').textContent=rows.toLocaleString();
+ var pages=Math.ceil(rows/100),locks=rows+pages,th=5000,hot=locks>=th&&mode!=='DISABLE',out;
+ var target=mode==='AUTO'&&part?'the partition (HoBT X lock)':'the whole table (OBJECT X lock)';
+ if(mode==='TABLE'&&part)target='the whole table (TABLE is the default even when partitioned)';
+ if(locks<th)out='≈ <b>'+rows.toLocaleString()+'</b> KEY X + <b>'+pages.toLocaleString()+'</b> PAGE IX + 1 OBJECT IX ≈ <b>'+(locks+1).toLocaleString()+'</b> locks. Below the ~5,000 threshold: <span class="yes">no escalation</span>. Other sessions can still change other rows.';
+ else if(mode==='DISABLE')out='≈ <b>'+(locks+1).toLocaleString()+'</b> locks held individually (escalation disabled for this table). <span class="mid">No table lock</span>, but every lock costs ~96 bytes of lock memory. DISABLE prevents escalation in most cases, not all (e.g. a SERIALIZABLE scan of a heap can still take a table lock).';
+ else if(conf)out='Escalation <span class="mid">attempted but fails</span>: another session\'s lock on the table is incompatible with X. The statement keeps its '+(locks+1).toLocaleString()+' row/page locks and retries after every 1,250 more locks.';
+ else out='Escalated to '+target+': <span class="no">row/page locks released, 1 X lock left</span>. Other sessions now wait (LCK_M_IX / LCK_M_IS) even for rows this statement never touched, until COMMIT.';
+ if(mode==='AUTO'&&!part&&locks>=th&&!conf)out+='<br><small>AUTO behaves like TABLE on a non-partitioned table.</small>';
+ $('esOut').innerHTML=out+'<br><small>Assumes ~100 rows per page; real counts depend on row size and plan.</small>';
+ var b=$('esBar');b.style.width=Math.min(100,locks/th*100)+'%';b.classList.toggle('hot',hot&&!conf);
+ document.querySelectorAll('#msHier span').forEach(function(s){var l=s.dataset.l;s.classList.toggle('on',(hot&&!conf)?(l===(mode==='AUTO'&&part?'hobt':'obj')):(l==='row'||l==='page'))})}
+['esRows','esMode','esPart','esConf'].forEach(function(id){$(id).addEventListener('input',esc1);$(id).addEventListener('change',esc1)});
+function pg1(){var rel=+$('pgRel').value,m=Math.max(1,+$('pgMlpt').value||64),mc=Math.max(1,+$('pgMc').value||100),cc=Math.max(1,+$('pgCc').value||1);
+ $('pgRelV').textContent=rel.toLocaleString();var cap=m*mc,need=rel*cc,pct=need/cap*100;
+ var h='Lock table ≈ '+m+' × '+mc+' = <b>'+cap.toLocaleString()+'</b> slots (plus max_prepared_transactions and background workers). These transactions need ≈ <b>'+need.toLocaleString()+'</b>.';
+ h+=need>cap?'<br><span class="no">✗ ERROR: out of shared memory</span> · HINT: You might need to increase max_locks_per_transaction.':pct>60?'<br><span class="mid">⚠ '+Math.round(pct)+'% of the shared lock table</span>: one more busy session could exhaust it.':'<br><span class="yes">✓ Fits</span> ('+Math.round(pct)+'%).';
+ h+='<br><small>The number of <b>rows</b> locked doesn\'t matter: row locks live in the tuples.'+(rel>16?' More than 16 relations per backend also spills out of the fast-path slots (PG ≤ 17), which is where LWLock:LockManager contention starts.':'')+'</small>';
+ $('pgOut').innerHTML=h;var b=$('pgBar');b.style.width=Math.min(100,pct)+'%';b.classList.toggle('hot',pct>60)}
+['pgRel','pgMlpt','pgMc','pgCc'].forEach(function(id){$(id).addEventListener('input',pg1)});
+/* ================= diagnostic queries ================= */
+var DQ={ms:[
+{t:'Who is blocked right now',k:'ro',q:`SELECT r.session_id, r.blocking_session_id, r.wait_type, r.wait_time AS wait_ms,
+       r.wait_resource, DB_NAME(r.database_id) AS db, r.status,
+       SUBSTRING(t.text, r.statement_start_offset/2 + 1,
+         (CASE r.statement_end_offset WHEN -1 THEN DATALENGTH(t.text)
+               ELSE r.statement_end_offset END - r.statement_start_offset)/2 + 1) AS running_stmt
+FROM sys.dm_exec_requests AS r
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) AS t
+WHERE r.blocking_session_id <> 0
+ORDER BY r.wait_time DESC;`,n:'wait_resource decodes as KEY: dbid:hobt_id (hash), PAGE: db:file:page, OBJECT: db:object_id.'},
+{t:'Head blockers (including sleeping sessions with an open transaction)',k:'ro',q:`SELECT s.session_id, s.status, s.login_name, s.host_name, s.program_name,
+       s.open_transaction_count, s.last_request_end_time,
+       t.text AS last_sql
+FROM sys.dm_exec_sessions AS s
+JOIN sys.dm_exec_connections AS c ON c.session_id = s.session_id
+OUTER APPLY sys.dm_exec_sql_text(c.most_recent_sql_handle) AS t
+WHERE s.session_id IN (SELECT blocking_session_id FROM sys.dm_exec_requests WHERE blocking_session_id <> 0)
+  AND s.session_id NOT IN (SELECT session_id FROM sys.dm_exec_requests WHERE blocking_session_id <> 0);`,n:'A head blocker with status "sleeping" and open_transaction_count > 0 is an app or user that never committed.'},
+{t:'Blocking tree',k:'ro',q:`WITH b AS (
+  SELECT session_id, blocking_session_id FROM sys.dm_exec_requests
+  WHERE blocking_session_id <> 0),
+heads AS (
+  SELECT DISTINCT blocking_session_id AS session_id FROM b
+  WHERE blocking_session_id NOT IN (SELECT session_id FROM b)),
+tree AS (
+  SELECT h.session_id, CAST(NULL AS smallint) AS blocked_by, 0 AS lvl,
+         CAST(RIGHT('00000' + CAST(h.session_id AS varchar(5)), 5) AS varchar(4000)) AS path
+  FROM heads h
+  UNION ALL
+  SELECT b.session_id, b.blocking_session_id, t.lvl + 1,
+         CAST(t.path + '/' + RIGHT('00000' + CAST(b.session_id AS varchar(5)), 5) AS varchar(4000))
+  FROM b JOIN tree t ON b.blocking_session_id = t.session_id)
+SELECT REPLICATE('    ', lvl) + CAST(session_id AS varchar(5)) AS session_tree, blocked_by, lvl
+FROM tree ORDER BY path
+OPTION (MAXRECURSION 100);`,n:'Snapshot of the DMVs, so a chain can change between rows. A true deadlock never shows here for long: the lock monitor kills it.'},
+{t:'Locks in the current database, with object and index names',k:'ro',q:`SELECT l.request_session_id AS spid, l.resource_type, l.request_mode, l.request_status,
+       COALESCE(OBJECT_NAME(p.object_id),
+                CASE WHEN l.resource_type = 'OBJECT' THEN OBJECT_NAME(l.resource_associated_entity_id) END) AS object_name,
+       i.name AS index_name, l.resource_description
+FROM sys.dm_tran_locks AS l
+LEFT JOIN sys.partitions AS p
+       ON p.hobt_id = l.resource_associated_entity_id
+      AND l.resource_type IN ('KEY','PAGE','RID','HOBT')
+LEFT JOIN sys.indexes AS i ON i.object_id = p.object_id AND i.index_id = p.index_id
+WHERE l.resource_database_id = DB_ID()
+  AND l.resource_type <> 'DATABASE'
+ORDER BY l.request_session_id, l.resource_type;`,n:'Run it in the database you are investigating; the name lookups only work for the current DB.'},
+{t:'Lock count per session',k:'ro',q:`SELECT request_session_id AS spid, resource_type, request_mode, request_status, COUNT(*) AS locks
+FROM sys.dm_tran_locks
+GROUP BY request_session_id, resource_type, request_mode, request_status
+ORDER BY locks DESC;`,n:'Thousands of KEY locks for one session means it is approaching escalation (~5,000).'},
+{t:'Recent deadlock graphs (system_health, ring buffer)',k:'ro',q:`SELECT xed.value('@timestamp', 'datetime2') AS utc_time,
+       xed.query('.') AS deadlock_xml
+FROM (SELECT CAST(st.target_data AS xml) AS target_data
+      FROM sys.dm_xe_session_targets AS st
+      JOIN sys.dm_xe_sessions AS s ON s.address = st.event_session_address
+      WHERE s.name = 'system_health' AND st.target_name = 'ring_buffer') AS d
+CROSS APPLY d.target_data.nodes('RingBufferTarget/event[@name="xml_deadlock_report"]') AS x(xed)
+ORDER BY utc_time DESC;`,n:'Click a deadlock_xml value in SSMS and save it as .xdl to see the graph. The ring buffer only keeps recent events.'},
+{t:'Deadlock graphs from the system_health files',k:'ro',q:`-- 1) where are the files?
+SELECT CAST(t.target_data AS xml).value('(EventFileTarget/File/@name)[1]', 'nvarchar(4000)') AS current_file
+FROM sys.dm_xe_session_targets AS t
+JOIN sys.dm_xe_sessions AS s ON s.address = t.event_session_address
+WHERE s.name = 'system_health' AND t.target_name = 'event_file';
+
+-- 2) read them (system_health*.xel in the same folder works on most installs)
+SELECT CAST(event_data AS xml).value('(event/@timestamp)[1]', 'datetime2') AS utc_time,
+       CAST(event_data AS xml) AS deadlock_xml
+FROM sys.fn_xe_file_target_read_file('system_health*.xel', NULL, NULL, NULL)
+WHERE object_name = 'xml_deadlock_report'
+ORDER BY utc_time DESC;`,n:'If the relative pattern returns nothing, use the full folder from step 1. On RDS the files sit under D:\\rdsdbdata\\log (check step 1 on your instance).',aws:1},
+{t:'sp_who2 (quick look)',k:'ro',q:`EXEC sp_who2 'active';`,n:'BlkBy column = blocking SPID. Undocumented but present on every version; the DMV queries above give more detail.'},
+{t:'Lock waits since restart',k:'ro',q:`SELECT wait_type, waiting_tasks_count, wait_time_ms,
+       wait_time_ms / NULLIF(waiting_tasks_count, 0) AS avg_wait_ms, max_wait_time_ms
+FROM sys.dm_os_wait_stats
+WHERE wait_type LIKE 'LCK_M_%' AND waiting_tasks_count > 0
+ORDER BY wait_time_ms DESC;`,n:'Cumulative since the last restart (or DBCC SQLPERF(\'sys.dm_os_wait_stats\', CLEAR)).'},
+{t:'Escalations and lock waits per index',k:'ro',q:`SELECT OBJECT_NAME(s.object_id) AS table_name, i.name AS index_name, t.lock_escalation_desc,
+       s.index_lock_promotion_attempt_count AS escalation_attempts,
+       s.index_lock_promotion_count AS escalations,
+       s.row_lock_wait_count, s.row_lock_wait_in_ms,
+       s.page_lock_wait_count, s.page_lock_wait_in_ms
+FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL) AS s
+JOIN sys.indexes AS i ON i.object_id = s.object_id AND i.index_id = s.index_id
+JOIN sys.tables AS t ON t.object_id = s.object_id
+WHERE s.index_lock_promotion_attempt_count > 0 OR s.row_lock_wait_count > 0
+ORDER BY s.index_lock_promotion_count DESC, s.row_lock_wait_in_ms DESC;`,n:'Counters reset when the metadata cache entry is evicted or the instance restarts, so treat them as "since a while ago".'},
+{t:'Isolation levels: sessions and databases',k:'ro',q:`SELECT session_id, program_name,
+       CASE transaction_isolation_level WHEN 0 THEN 'Unspecified' WHEN 1 THEN 'READ UNCOMMITTED'
+         WHEN 2 THEN 'READ COMMITTED' WHEN 3 THEN 'REPEATABLE READ' WHEN 4 THEN 'SERIALIZABLE'
+         WHEN 5 THEN 'SNAPSHOT' END AS isolation_level
+FROM sys.dm_exec_sessions WHERE is_user_process = 1;
+
+SELECT name, is_read_committed_snapshot_on, snapshot_isolation_state_desc
+FROM sys.databases;`,n:'Session level 2 (READ COMMITTED) means RCSI when is_read_committed_snapshot_on = 1 for that database.'},
+{t:'Long-open transactions',k:'ro',q:`SELECT st.session_id, s.status, s.login_name, s.program_name,
+       at.transaction_begin_time,
+       DATEDIFF(SECOND, at.transaction_begin_time, SYSDATETIME()) AS open_seconds,
+       dt.database_transaction_log_bytes_used AS log_bytes
+FROM sys.dm_tran_session_transactions AS st
+JOIN sys.dm_tran_active_transactions AS at ON at.transaction_id = st.transaction_id
+JOIN sys.dm_exec_sessions AS s ON s.session_id = st.session_id
+LEFT JOIN sys.dm_tran_database_transactions AS dt
+       ON dt.transaction_id = st.transaction_id AND dt.database_id = DB_ID()
+ORDER BY at.transaction_begin_time;`,n:'Long transactions hold their X locks and, with RCSI/SNAPSHOT, keep the version store from shrinking.'},
+{t:'Fail fast instead of waiting forever (session settings)',k:'set',q:`SET LOCK_TIMEOUT 5000;          -- ms; error 1222 instead of waiting (-1 = forever, default)
+SET DEADLOCK_PRIORITY LOW;      -- volunteer as deadlock victim (LOW | NORMAL | HIGH | -10..10)`,n:'Session-level only. Note: a 1222 timeout cancels the statement, not the transaction; handle it with XACT_ABORT or explicit rollback.'},
+{t:'Kill a session',k:'dz',q:`KILL {id};                       -- rolls back its open transaction
+KILL {id} WITH STATUSONLY;       -- progress of a rollback already underway`,n:'Rollback can take as long as the work did, and locks stay held until it finishes. Check what the session is doing first. On RDS the master user has the permission needed for KILL in most setups, but verify on your instance.',aws:1}
+],pg:[
+{t:'Who is blocked, and by whom',k:'ro',q:`SELECT a.pid, pg_blocking_pids(a.pid) AS blocked_by,
+       a.wait_event_type, a.wait_event, a.state,
+       now() - a.query_start AS waiting_for, a.usename, a.application_name,
+       left(a.query, 200) AS query
+FROM pg_stat_activity AS a
+WHERE cardinality(pg_blocking_pids(a.pid)) > 0
+ORDER BY waiting_for DESC;`,n:'pg_blocking_pids also returns a queued-but-not-granted waiter ahead of you (the ALTER TABLE pile-up case). Calling it often on a very busy server is not free.'},
+{t:'Head blockers (block others, are not blocked themselves)',k:'ro',q:`SELECT a.pid, a.state, a.usename, a.application_name, a.client_addr,
+       now() - a.xact_start AS xact_age, now() - a.state_change AS in_state_for,
+       left(a.query, 200) AS last_query
+FROM pg_stat_activity AS a
+WHERE a.pid IN (SELECT unnest(pg_blocking_pids(pid)) FROM pg_stat_activity)
+  AND cardinality(pg_blocking_pids(a.pid)) = 0;`,n:'state = "idle in transaction" means the app opened a transaction and walked away; query shows its last statement, not what holds the lock.'},
+{t:'pg_locks with readable targets',k:'ro',q:`SELECT l.pid, l.locktype, l.mode, l.granted,
+       CASE l.locktype
+         WHEN 'relation'      THEN l.relation::regclass::text
+         WHEN 'tuple'         THEN l.relation::regclass::text || ' ' || l.page || ':' || l.tuple
+         WHEN 'transactionid' THEN 'xid ' || l.transactionid
+         WHEN 'virtualxid'    THEN 'vxid ' || l.virtualxid
+         WHEN 'advisory'      THEN 'advisory ' || l.classid || ':' || l.objid
+         ELSE l.locktype END AS target,
+       l.waitstart, a.state, left(a.query, 120) AS query
+FROM pg_locks AS l
+LEFT JOIN pg_stat_activity AS a ON a.pid = l.pid
+WHERE l.pid <> pg_backend_pid()
+  AND (l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) OR l.database IS NULL)
+ORDER BY l.granted, l.waitstart NULLS LAST, l.pid;`,n:'waitstart needs PostgreSQL 14+ (remove the column on older versions). Row locks only show here while someone waits on them (as tuple / transactionid).'},
+{t:'What sessions are waiting on (lock and LWLock summary)',k:'ro',q:`SELECT wait_event_type, wait_event, count(*) AS sessions
+FROM pg_stat_activity
+WHERE wait_event_type IN ('Lock', 'LWLock')
+GROUP BY 1, 2 ORDER BY 3 DESC;`,n:'Lock:relation = table locks (DDL), Lock:transactionid / tuple = row locks, LWLock:LockManager = lock-table contention (many partitions/indexes per query; seen often on Aurora). Performance Insights shows the same breakdown over time.',aws:1},
+{t:'Idle in transaction (the usual lock holders)',k:'ro',q:`SELECT pid, usename, application_name, client_addr,
+       now() - xact_start AS xact_age, now() - state_change AS idle_for,
+       left(query, 200) AS last_query
+FROM pg_stat_activity
+WHERE state IN ('idle in transaction', 'idle in transaction (aborted)')
+ORDER BY state_change;`,n:'Also check: SHOW idle_in_transaction_session_timeout; (0 = off).'},
+{t:'Lock-related settings',k:'ro',q:`SELECT name, setting, unit, source
+FROM pg_settings
+WHERE name IN ('deadlock_timeout', 'lock_timeout', 'statement_timeout',
+               'idle_in_transaction_session_timeout', 'transaction_timeout',
+               'max_locks_per_transaction', 'max_pred_locks_per_transaction',
+               'max_connections', 'log_lock_waits', 'default_transaction_isolation');`,n:'transaction_timeout exists from PG 17. On RDS / Aurora change server-wide values in the DB (cluster) parameter group; log_lock_waits = on logs waits longer than deadlock_timeout.',aws:1},
+{t:'Safe DDL pattern',k:'set',q:`SET lock_timeout = '3s';   -- give up instead of queueing everyone behind you
+ALTER TABLE orders ADD COLUMN note text;
+-- on 55P03 (lock_not_available): wait a bit, retry
+RESET lock_timeout;`,n:'This runs your DDL (a write). Use CREATE INDEX CONCURRENTLY and ADD CONSTRAINT … NOT VALID then VALIDATE CONSTRAINT to avoid long strong locks.'},
+{t:'Deadlocks per database',k:'ro',q:`SELECT datname, deadlocks, conflicts, stats_reset
+FROM pg_stat_database
+WHERE datname IS NOT NULL
+ORDER BY deadlocks DESC;`,n:'Cumulative counter. The detail (both statements) is only in the server log: on RDS / Aurora, the postgresql.log in the console or CloudWatch Logs if exported.',aws:1},
+{t:'Advisory locks held',k:'ro',q:`SELECT l.pid, l.mode, l.granted, l.classid, l.objid, l.objsubid,
+       a.application_name, left(a.query, 120) AS query
+FROM pg_locks AS l
+JOIN pg_stat_activity AS a ON a.pid = l.pid
+WHERE l.locktype = 'advisory';`,n:'pg_advisory_lock(bigint) shows the key split into classid (high 32 bits) and objid (low 32 bits), with objsubid = 1; the two-int4 form uses objsubid = 2.'},
+{t:'Lock table usage vs capacity',k:'ro',q:`SELECT count(*) AS locks_now,
+       current_setting('max_locks_per_transaction')::int
+         * (current_setting('max_connections')::int
+            + current_setting('max_prepared_transactions')::int) AS approx_capacity
+FROM pg_locks;`,n:'Approximate: background workers also count, and fast-path locks appear in pg_locks (fastpath = t) without using shared lock-table slots.'},
+{t:'Cancel a backend\'s current query',k:'dz',q:`SELECT pg_cancel_backend({id});`,n:'Cancels the running statement; the session stays connected. Does nothing for an idle-in-transaction session that is not running anything; use terminate for that.'},
+{t:'Terminate a backend',k:'dz',q:`SELECT pg_terminate_backend({id});
+
+-- every session idle in transaction for more than 10 minutes:
+SELECT pid, pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE state = 'idle in transaction'
+  AND now() - state_change > interval '10 minutes'
+  AND pid <> pg_backend_pid();`,n:'Closes the connection and rolls back its transaction. On RDS / Aurora, rds_superuser can signal ordinary sessions but not rdsadmin or other superuser-owned ones.',aws:1}
+]};
+function renderDQ(el,list,eng){el.innerHTML=list.map(function(d,i){
+ var tag=d.k==='ro'?'<span class="tag ro">read-only</span>':d.k==='dz'?'<span class="tag dz">⚠ destructive</span>':'<span class="tag">changes session / runs DDL</span>';
+ var inp=d.k==='dz'?'<label class="note" style="display:flex;gap:6px;align-items:center">'+(eng==='ms'?'spid':'pid')+' <input class="num" type="number" min="1" inputmode="numeric" data-q="'+i+'" placeholder="'+(eng==='ms'?'61':'4101')+'" aria-label="'+(eng==='ms'?'session id':'process id')+'"></label>':'';
+ return '<div class="q'+(d.k==='dz'?' dz':'')+'"><div class="qh"><h4>'+esc(d.t)+'</h4>'+tag+(d.aws?'<span class="tag aws">AWS note</span>':'')+inp+'</div><pre data-q="'+i+'">'+esc(fillQ(d.q,eng,''))+'</pre><div class="qf"><p>'+esc(d.n)+'</p><button class="btn sm copy" data-q="'+i+'">Copy</button></div></div>'}).join('');
+ el.addEventListener('input',function(e){var t=e.target;if(t.dataset.q==null)return;el.querySelector('pre[data-q="'+t.dataset.q+'"]').textContent=fillQ(list[+t.dataset.q].q,eng,t.value)});
+ el.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b)return;var d=list[+b.dataset.q],text=el.querySelector('pre[data-q="'+b.dataset.q+'"]').textContent;
+  if(d.k==='dz'&&/<(spid|pid)>/.test(text)){toast('Enter the '+(eng==='ms'?'spid':'pid')+' first');return}
+  copy(text).then(function(){toast(d.k==='dz'?'Copied. ⚠ Destructive: double-check the id':'Copied')},function(){toast('Copy failed: select the text manually')})})}
+function fillQ(q,eng,v){v=String(v||'').replace(/\D/g,'');return q.split('{id}').join(v||(eng==='ms'?'<spid>':'<pid>'))}
+function copy(t){if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t);
+ return new Promise(function(ok,no){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy')?ok():no()}catch(x){no(x)}a.remove()})}
+renderDQ($('dqMs'),DQ.ms,'ms');renderDQ($('dqPg'),DQ.pg,'pg');
+
+/* ================= init ================= */
+var start='ms';try{var s=new URLSearchParams(location.search).get('eng')||localStorage.getItem(KEY);if(/^(ms|pg|cmp)$/.test(s))start=s}catch(x){}
+setEng(start);esc1();pg1();
+})();
+</script>
+</body>
+</html>

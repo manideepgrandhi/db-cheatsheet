@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 (Locking lab)
+- New page `locking.html` (🔒 icon in the header and a "Locking lab" link above the results): an interactive guide to locking in SQL Server and PostgreSQL / Aurora PG, with an SQL Server / PostgreSQL / Compare toggle.
+- Clickable compatibility matrices (SQL Server IS/S/U/IX/SIX/X/Sch-S/Sch-M and key-range; PostgreSQL 8 table modes with the commands that take each, and the 4 row-lock modes), plus "statement A vs statement B" pickers.
+- Two-session step-through simulator: SQL Server locking RC vs RCSI, SNAPSHOT update conflict (3960), deadlock (1205), lock escalation, UPDLOCK+READPAST queue; PostgreSQL MVCC, ALTER TABLE lock-queue pile-up and lock_timeout, deadlock (40P01), SKIP LOCKED, FK row-lock modes. Each step shows the DMV / pg_locks rows.
+- Isolation level tables, an escalation lab (~5,000-lock threshold, LOCK_ESCALATION) and a max_locks_per_transaction calculator, copyable diagnostic queries (kill / cancel / terminate tagged destructive), RDS SQL Server and Aurora PG notes.
+- PostgreSQL facts and queries checked against a real PostgreSQL 17 (both matrices, command lock modes, every simulator scenario, all diagnostic queries). T-SQL not yet run against a live SQL Server.
+
 ## 2026-10-25 (tempdb)
 - New category 🗄️ tempdb (SQL Server), placed after Performance: 27 tasks. Space (per-file size/used/free and startup size, user vs internal vs version store, version store holders, tempdb log and log_reuse_wait_desc, drive free space, autogrowth history), who is using tempdb (session + task space joined to SQL text, temp tables, spilling queries), contention (PAGELATCH on PFS/GAM/SGAM decoded, wait stats, file count vs CPUs and TF 1117/1118 notes, memory-optimized tempdb metadata 2019+), fixes (add / resize / equalise / move / remove files, shrink incl. RDS rds_shrink_tempdbfile, freeing caches, KILL, log-full fix, restart), Amazon RDS specifics (CONTROL on tempdb, no DBCC, instance store, Multi-AZ sync), and monitoring (one-query health summary, Agent alerts for 1105/9002, config checklist).
 - Source in `src/data-tempdb.js`. Cards show only the SQL Server panel (new generic `only:'ms'` flag in `app.js`) and are hidden when the engine filter excludes SQL Server.

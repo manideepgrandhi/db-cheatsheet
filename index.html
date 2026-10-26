@@ -38,6 +38,11 @@ header.top{position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(va
 :root[data-theme=dark] .logo{color:#0b0f18}
 .title{font-weight:750;font-size:1.05rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .title small{display:block;font-weight:500;color:var(--muted);font-size:.75rem}
+a.ib{text-decoration:none;color:inherit}
+.lab-promo{display:flex;gap:10px;align-items:center;margin:12px 0 4px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:inherit;text-decoration:none;font-size:.88rem;line-height:1.35}
+.lab-promo:hover{border-color:var(--brand,#3b82f6)}
+.lab-promo span:first-child{font-size:1.3rem}
+.lab-promo span:last-child{margin-left:auto;font-weight:700}
 .ib{min-width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:1.15rem;flex:none}
 .search{position:relative;margin-top:8px}
 .search input{width:100%;height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);padding:0 44px 0 42px;font-size:16px;outline:none}
@@ -254,6 +259,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
   <div class="logo">&gt;_</div>
   <div class="title">DBA Cheat Sheet<small>Aurora PG · SQL Server · MongoDB · MarkLogic · Linux</small></div>
   <button class="ib" id="themeBtn" aria-label="Toggle dark mode" title="Theme" style="display:none">🌓</button>
+  <a class="ib" href="locking.html" aria-label="Locking lab: SQL Server and PostgreSQL" title="Locking lab">🔒</a>
   <button class="ib" id="menuBtn" aria-label="Menu" title="Menu">⋯</button>
  </div>
  <div class="search"><span class="mag">🔍</span>
@@ -263,6 +269,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
  <div class="chips" id="catChips" role="group" aria-label="Categories"></div>
 </div></header>
 <main class="wrap">
+ <a class="lab-promo" href="locking.html"><span>🔒</span><span><b>Locking lab</b> · interactive lock matrices, two-session blocking and deadlock simulator, escalation and diagnostics for SQL Server and PostgreSQL</span><span aria-hidden="true">→</span></a>
  <div id="banner"></div>
  <div class="meta" id="meta"></div>
  <div class="list" id="list"></div>
