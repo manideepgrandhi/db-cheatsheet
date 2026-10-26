@@ -148,7 +148,7 @@ select{min-height:42px;border-radius:10px;border:1.5px solid var(--line);backgro
 .toast.show{opacity:1;transform:translateX(-50%)}
 .yes{color:var(--ok);font-weight:800}.no{color:var(--danger);font-weight:800}.mid{color:var(--warn);font-weight:800}
 .foot{color:var(--muted);font-size:.82rem;margin-top:26px}
-@media (max-width:560px){.lanehdr,.row{grid-template-columns:22px repeat(var(--n),minmax(0,1fr));gap:5px}.ev{padding:6px}.ev pre{font-size:11.5px}.mx td button{width:36px;height:34px}.mx.wide td button{width:32px}.mx th{font-size:.66rem;padding:2px}.ttl{min-width:0}}
+@media (max-width:560px){.lanehdr,.row{grid-template-columns:22px repeat(var(--n),minmax(0,1fr));gap:5px}.ev{padding:6px}.ev pre{font-size:11.5px}.mx{border-spacing:2px}.mx td button{width:32px;height:32px;font-size:.9rem}.mx.wide td button{width:30px}.mx th.corner{font-size:.6rem;line-height:1.1}.mx th{font-size:.66rem;padding:2px}.ttl{min-width:0}}
 @media (max-width:420px){.mx{border-spacing:2px}.mx td button,.mx.wide td button{width:31px;height:32px;font-size:.85rem;border-radius:6px}.mx th{font-size:.62rem;padding:1px}.mx th.corner{font-size:.55rem;white-space:normal;max-width:44px}.card{padding:10px}}
 </style>
 <!--mg:head inline--><style id="mg-shared-css">
@@ -504,7 +504,7 @@ var ROW={modes:['FOR KEY SHARE','FOR SHARE','FOR NO KEY UPDATE','FOR UPDATE'],sh
 
 /* ================= matrix renderer ================= */
 function matrix(tbl,ex,labels,ok,explain,headInfo,short){
- var n=labels.length,h='<thead><tr><th class="corner">req ↓ / held →</th>';
+ var n=labels.length,h='<thead><tr><th class="corner">req ↓<br>held →</th>';
  for(var j=0;j<n;j++)h+='<th scope="col"><button class="mh" data-c="'+j+'" style="all:unset;cursor:pointer">'+esc(short?short[j]:labels[j])+'</button></th>';
  h+='</tr></thead><tbody>';
  for(var i=0;i<n;i++){h+='<tr><th scope="row" class="rh"><button class="mh" data-r="'+i+'" style="all:unset;cursor:pointer">'+esc(short?short[i]:labels[i])+'</button></th>';
