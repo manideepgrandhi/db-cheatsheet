@@ -99,7 +99,7 @@ function panel(t,e,on){var x=t[e.id];var h='<div class="pn'+(on?' on':'')+'" sty
 function card(t){var engs=ENG.filter(function(e){return st.eng.indexOf(e.id)>=0&&(t[e.id]||!t.custom)});if(t.custom)engs=engs.filter(function(e){return t[e.id]});if(t.lx)engs=[LX];if(t.pgo)engs=engs.filter(function(e){return e.id==='pg'});if(t.only)engs=engs.filter(function(e){return e.id===t.only});
  var act=ui.tab[t.id];if(!engs.some(function(e){return e.id===act})){var f=engs.filter(function(e){return t[e.id]&&!t[e.id].na})[0]||engs[0];act=f&&f.id}
  var star=st.stars.indexOf(t.id)>=0;var note=st.notes[t.id];
- var h='<article class="card" data-id="'+esc(t.id)+'"><div class="ch"><div style="flex:1;min-width:0"><h3>'+esc(t.t)+'</h3><div class="sub"><span class="tag">'+esc(CATNAME[t.cat]||t.cat)+'</span>'+(t.tri?'<span class="tag cu">3 AM</span>':'')+(t.danger?'<span class="tag dz">⚠ Destructive</span>':'')+(t.custom?'<span class="tag cu">Mine</span>':'')+'</div></div>'+
+ var h='<article class="card" data-id="'+esc(t.id)+'"><div class="ch"><div style="flex:1;min-width:0"><h3 id="task-'+esc(t.id)+'">'+esc(t.t)+'</h3><div class="sub"><span class="tag">'+esc(CATNAME[t.cat]||t.cat)+'</span>'+(t.tri?'<span class="tag cu">3 AM</span>':'')+(t.danger?'<span class="tag dz">⚠ Destructive</span>':'')+(t.custom?'<span class="tag cu">Mine</span>':'')+'</div></div>'+
  '<button class="star" data-star="'+esc(t.id)+'" aria-pressed="'+star+'" aria-label="Star">'+(star?'★':'☆')+'</button></div>';
  if(engs.length>1)h+='<div class="tabs" role="tablist">'+engs.map(function(e){var x=t[e.id];return '<button class="tab'+(!x||x.na?' tna':'')+'" role="tab" style="--ec:var(--'+e.id+')" data-tab="'+e.id+'" aria-selected="'+(e.id===act)+'">'+e.name+'</button>'}).join('')+'</div>';
  h+='<div class="panels" style="--n:'+engs.length+'">'+engs.map(function(e){return panel(t,e,e.id===act)}).join('')+'</div>';
@@ -161,5 +161,11 @@ function makeIcon(size){try{var c=document.createElement('canvas');c.width=c.hei
 try{$('appleIcon').href=makeIcon(180);var base=location.href.split('#')[0].split('?')[0];
  var man={name:'DBA Cheat Sheet',short_name:'DBA Cheats',description:'Offline DBA commands for Aurora PostgreSQL, SQL Server, MongoDB and MarkLogic',start_url:base,scope:base.replace(/[^\/]*$/,''),display:'standalone',background_color:'#f3f5f9',theme_color:'#2f5bd3',icons:[{src:makeIcon(192),sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:makeIcon(512),sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
  $('manifestLink').href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(man))}catch(e){}
-load();applyTheme();render();persist();
+/* ---------- deep links (#task-<id>, used by the cross-site search) ---------- */
+function showHash(){var m=/^#task-(.+)$/.exec(location.hash);if(!m)return;var id;try{id=decodeURIComponent(m[1])}catch(e){return}var t=findTask(id);if(!t)return;
+ if(!document.getElementById('task-'+id)){if(!hasEng(t)){st.eng=['pg','ms','mg','ml'];save()}ui.cat='all';ui.q='';$('q').value='';render()}
+ var h=document.getElementById('task-'+id);if(!h)return;var top=document.querySelector('header.top'),off=(top?top.offsetHeight:0)+12;
+ window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.pageYOffset-off));var c=h.closest('.card');if(c){c.classList.remove('mg-s-hit');void c.offsetWidth;c.classList.add('mg-s-hit')}}
+window.addEventListener('hashchange',showHash);
+load();applyTheme();render();persist();showHash();
 })();
